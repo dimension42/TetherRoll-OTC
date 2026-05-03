@@ -11,6 +11,7 @@ const navLinks = [
   { href: '/escrow', label: 'Escrow' },
   { href: '/deposit', label: 'Deposit' },
   { href: '/features', label: 'Features' },
+  { href: '/demo', label: 'Demo' },
 ];
 
 export default function Navbar() {

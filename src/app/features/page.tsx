@@ -1,11 +1,8 @@
 'use client';
 
 import { motion, useInView } from 'framer-motion';
-import { useRef, useEffect, useState, lazy, Suspense } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
-import Tilt from 'react-parallax-tilt';
-
-const SecurityScene = lazy(() => import('./SecurityScene'));
 
 // ─── Animated Counter ───────────────────────────────────────────────────────
 function Counter({ target, suffix = '' }: { target: number; suffix?: string }) {
@@ -33,34 +30,47 @@ function Counter({ target, suffix = '' }: { target: number; suffix?: string }) {
   return <span ref={ref}>{isInView ? `${count.toLocaleString()}${suffix}` : '0'}</span>;
 }
 
-// ─── Floating Particles Background ─────────────────────────────────────────
+// ─── Floating Particles Background (deterministic) ─────────────────────────
 function FloatingParticles() {
+  const particles = Array.from({ length: 30 }).map((_, i) => {
+    const size = (i % 4) + 2;
+    const colors = ['#00c9a7', '#6366f1', '#00ff88'];
+    const color = colors[i % 3];
+    const left = ((i * 37 + 13) % 100);
+    const top = ((i * 53 + 7) % 100);
+    const xOffset = ((i * 17) % 20) - 10;
+    const duration = (i % 4) + 3;
+    const delay = (i % 5) * 0.4;
+
+    return (
+      <motion.div
+        key={i}
+        className="absolute rounded-full"
+        style={{
+          width: size,
+          height: size,
+          background: color,
+          opacity: 0.3,
+          left: `${left}%`,
+          top: `${top}%`,
+        }}
+        animate={{
+          y: [0, -30, 0],
+          x: [0, xOffset, 0],
+          opacity: [0.2, 0.5, 0.2],
+        }}
+        transition={{
+          duration: duration,
+          repeat: Infinity,
+          delay: delay,
+        }}
+      />
+    );
+  });
+
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {Array.from({ length: 30 }).map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute rounded-full"
-          style={{
-            width: Math.random() * 4 + 2,
-            height: Math.random() * 4 + 2,
-            background: i % 3 === 0 ? '#00c9a7' : i % 3 === 1 ? '#6366f1' : '#00ff88',
-            opacity: 0.3,
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-          }}
-          animate={{
-            y: [0, -30, 0],
-            x: [0, Math.random() * 20 - 10, 0],
-            opacity: [0.2, 0.5, 0.2],
-          }}
-          transition={{
-            duration: Math.random() * 4 + 3,
-            repeat: Infinity,
-            delay: Math.random() * 2,
-          }}
-        />
-      ))}
+      {particles}
     </div>
   );
 }
@@ -105,44 +115,82 @@ function EscrowStep({ step, index, total }: { step: { title: string; desc: strin
   );
 }
 
-// ─── Feature Card ───────────────────────────────────────────────────────────
+// ─── Crypto Coin Logo ───────────────────────────────────────────────────────
+function CoinLogo({ coin }: { coin: { symbol: string; name: string; color: string; letter: string } }) {
+  return (
+    <div className="flex flex-col items-center gap-2 mx-6 flex-shrink-0">
+      <div
+        className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg"
+        style={{
+          background: coin.color,
+          boxShadow: `0 4px 20px ${coin.color}44`,
+        }}
+      >
+        <span className="text-white font-black text-xl">{coin.letter}</span>
+      </div>
+      <span className="text-white font-semibold text-sm">{coin.symbol}</span>
+      <span className="text-gray-500 text-xs">{coin.name}</span>
+    </div>
+  );
+}
+
+// ─── Data ───────────────────────────────────────────────────────────────────
 const features = [
   {
+    number: '01',
+    keyword: 'ESCROW',
     title: 'On-Chain Escrow',
     desc: 'Both assets are locked in an audited smart contract until the trade is mutually confirmed. Neither party can withdraw unilaterally.',
-    icon: '🔒',
     color: '#00c9a7',
   },
   {
-    title: 'Cash ↔ Crypto',
+    number: '02',
+    keyword: 'CASH',
+    title: 'Cash to Crypto',
     desc: 'Trade physical cash for crypto with full on-chain security guarantees. The smart contract acts as your escrow -- no physical middleman required.',
-    icon: '💵',
     color: '#6366f1',
   },
   {
+    number: '03',
+    keyword: 'WALLET',
     title: 'Multi-Wallet Support',
     desc: 'Connect with MetaMask, WalletConnect, Coinbase Wallet, Rabby, and more. Any EVM-compatible wallet works seamlessly.',
-    icon: '👛',
     color: '#00ff88',
   },
   {
+    number: '04',
+    keyword: 'SPEED',
     title: 'Instant Settlement',
     desc: 'Once both parties confirm delivery, settlement is automatic. Fees are distributed and funds released in the same transaction.',
-    icon: '⚡',
     color: '#00c9a7',
   },
   {
+    number: '05',
+    keyword: 'RESOLVE',
     title: 'Dispute Resolution',
     desc: '2-of-3 multisig arbitration system resolves disputes within 48 hours. Fair, transparent, and immutable on-chain.',
-    icon: '⚖️',
     color: '#ff4466',
   },
   {
+    number: '06',
+    keyword: 'SAFE',
     title: 'Non-Custodial',
     desc: 'Your assets are always in smart contracts or your own wallet. TetherRoll never holds custody of your funds at any point.',
-    icon: '🛡️',
     color: '#6366f1',
   },
+];
+
+const coins = [
+  { symbol: 'BTC', name: 'Bitcoin', color: '#F7931A', letter: 'B' },
+  { symbol: 'ETH', name: 'Ethereum', color: '#627EEA', letter: 'E' },
+  { symbol: 'SOL', name: 'Solana', color: '#9945FF', letter: 'S' },
+  { symbol: 'XRP', name: 'Ripple', color: '#00AAE4', letter: 'X' },
+  { symbol: 'ATOM', name: 'Cosmos', color: '#2E3148', letter: 'A' },
+  { symbol: 'USDT', name: 'Tether', color: '#26A17B', letter: 'T' },
+  { symbol: 'USDC', name: 'USD Coin', color: '#2775CA', letter: 'U' },
+  { symbol: 'DOGE', name: 'Dogecoin', color: '#C2A633', letter: 'D' },
+  { symbol: 'BNB', name: 'BNB', color: '#F3BA2F', letter: 'B' },
+  { symbol: 'MATIC', name: 'Polygon', color: '#8247E5', letter: 'M' },
 ];
 
 const escrowSteps = [
@@ -161,9 +209,6 @@ const stats = [
 ];
 
 export default function FeaturesPage() {
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => { setIsClient(true); }, []);
-
   return (
     <div className="min-h-screen bg-[#080808] pt-20">
       {/* ─── Hero Section ─────────────────────────────────────────────── */}
@@ -176,23 +221,26 @@ export default function FeaturesPage() {
         />
         <FloatingParticles />
         <div className="relative z-10 max-w-5xl mx-auto px-4 text-center">
-          <motion.h1
-            className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight"
+          <motion.div
+            className="mb-6"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
           >
-            Built for Secure{' '}
             <span
+              className="text-7xl md:text-9xl font-black tracking-tighter block mb-2"
               style={{
                 background: 'linear-gradient(135deg, #00c9a7, #6366f1)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
             >
-              OTC Trading
+              OTC
             </span>
-          </motion.h1>
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white leading-tight">
+              Built for Secure Trading
+            </h1>
+          </motion.div>
           <motion.p
             className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto"
             initial={{ opacity: 0, y: 20 }}
@@ -226,35 +274,41 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      {/* ─── 3D Security Visualization ────────────────────────────────── */}
-      <section className="py-20 relative">
+      {/* ─── Supported Assets (Crypto Logos Marquee) ──────────────────── */}
+      <section className="py-20 relative overflow-hidden">
         <div className="max-w-5xl mx-auto px-4">
           <motion.div
-            className="text-center mb-10"
+            className="text-center mb-14"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
           >
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
-              Fortified by Smart Contracts
+              Supported Assets
             </h2>
             <p className="text-gray-400 max-w-xl mx-auto">
-              Every trade is protected by audited, immutable on-chain logic. No human can
-              override the escrow without consensus.
+              Trade all major cryptocurrencies with full on-chain escrow protection.
             </p>
           </motion.div>
+        </div>
+        {/* Marquee scroll */}
+        <div className="relative w-full overflow-hidden">
           <motion.div
-            className="w-full h-[350px] md:h-[450px] rounded-2xl overflow-hidden"
-            style={{
-              background: 'rgba(17,17,17,0.8)',
-              border: '1px solid rgba(0,201,167,0.15)',
+            className="flex items-center py-8"
+            animate={{ x: ['0%', '-50%'] }}
+            transition={{
+              x: {
+                repeat: Infinity,
+                repeatType: 'loop',
+                duration: 20,
+                ease: 'linear',
+              },
             }}
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
           >
-            {isClient && <Suspense fallback={null}><SecurityScene /></Suspense>}
+            {/* Double the coins for seamless loop */}
+            {[...coins, ...coins].map((coin, i) => (
+              <CoinLogo key={`${coin.symbol}-${i}`} coin={coin} />
+            ))}
           </motion.div>
         </div>
       </section>
@@ -270,7 +324,7 @@ export default function FeaturesPage() {
           >
             Everything You Need for Safe OTC
           </motion.h2>
-          <div className="space-y-20">
+          <div className="space-y-24">
             {features.map((feat, i) => (
               <motion.div
                 key={feat.title}
@@ -280,16 +334,10 @@ export default function FeaturesPage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
               >
-                {/* Icon/Illustration side */}
-                <Tilt
-                  tiltMaxAngleX={8}
-                  tiltMaxAngleY={8}
-                  glareEnable
-                  glareMaxOpacity={0.15}
-                  className="w-full md:w-1/2"
-                >
+                {/* Typography visual side */}
+                <div className="w-full md:w-1/2">
                   <div
-                    className="aspect-video rounded-2xl flex items-center justify-center relative overflow-hidden"
+                    className="aspect-video rounded-2xl flex flex-col items-center justify-center relative overflow-hidden"
                     style={{
                       background: '#111',
                       border: `1px solid ${feat.color}22`,
@@ -301,13 +349,26 @@ export default function FeaturesPage() {
                         background: `radial-gradient(circle at 50% 50%, ${feat.color}15, transparent 70%)`,
                       }}
                     />
-                    <span className="text-6xl md:text-7xl relative z-10">{feat.icon}</span>
+                    <span
+                      className="text-8xl md:text-9xl font-black relative z-10 leading-none"
+                      style={{
+                        color: `${feat.color}22`,
+                      }}
+                    >
+                      {feat.number}
+                    </span>
+                    <span
+                      className="text-2xl md:text-3xl font-black tracking-widest relative z-10 mt-2"
+                      style={{ color: feat.color }}
+                    >
+                      {feat.keyword}
+                    </span>
                   </div>
-                </Tilt>
+                </div>
                 {/* Text side */}
                 <div className="w-full md:w-1/2">
-                  <h3 className="text-2xl font-bold text-white mb-3">{feat.title}</h3>
-                  <p className="text-gray-400 leading-relaxed">{feat.desc}</p>
+                  <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">{feat.title}</h3>
+                  <p className="text-gray-400 leading-relaxed text-lg">{feat.desc}</p>
                 </div>
               </motion.div>
             ))}
