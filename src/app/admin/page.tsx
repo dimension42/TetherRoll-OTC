@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useAccount } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAuth } from '@/hooks/useAuth';
 import { MOCK_POOLS, MOCK_ESCROWS } from '@/lib/mockData';
 import { ADMIN_ADDRESSES } from '@/lib/constants';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
+
+const ADMIN_EMAILS = ['admin@tetherroll.com', 'culture@culturing.org'];
 
 type Lang = 'ko' | 'en';
 
@@ -127,7 +128,7 @@ const i18n: Record<Lang, Record<string, string>> = {
 };
 
 export default function AdminPage() {
-  const { address, isConnected } = useAccount();
+  const { user, authenticated, login, ready } = useAuth();
   const [tab, setTab] = useState<AdminTab>('dashboard');
   const [lang, setLang] = useState<Lang>('ko');
   const [tradingFee, setTradingFee] = useState('30');   // bps
@@ -136,20 +137,38 @@ export default function AdminPage() {
 
   const t = i18n[lang];
 
-  const isAdmin = isConnected && address &&
-    ADMIN_ADDRESSES.map(a => a.toLowerCase()).includes(address.toLowerCase());
+  const address = user?.wallet?.address;
+  const email = user?.email?.address || user?.google?.email;
 
-  // Allow all connected wallets in development (address zero matches any wallet)
+  const isAdminByWallet = address &&
+    ADMIN_ADDRESSES.map(a => a.toLowerCase()).includes(address.toLowerCase());
+  const isAdminByEmail = email && ADMIN_EMAILS.includes(email.toLowerCase());
+  const isAdmin = authenticated && (isAdminByWallet || isAdminByEmail);
+
   const devMode = ADMIN_ADDRESSES[0] === '0x0000000000000000000000000000000000000000';
 
-  if (!isConnected) {
+  if (!ready) {
+    return (
+      <div className="min-h-screen pt-20 flex items-center justify-center" style={{ background: '#080808' }}>
+        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#ff4466', borderTopColor: 'transparent' }} />
+      </div>
+    );
+  }
+
+  if (!authenticated) {
     return (
       <div className="min-h-screen pt-20 flex items-center justify-center" style={{ background: '#080808' }}>
         <div className="text-center p-12 rounded-3xl" style={{ background: '#111', border: '1px solid rgba(255,68,102,0.2)' }}>
           <p className="text-5xl mb-4">🔐</p>
           <h2 className="text-2xl font-bold text-white mb-2">{t.adminAccess}</h2>
           <p className="mb-6" style={{ color: '#666' }}>{t.connectAdmin}</p>
-          <ConnectButton />
+          <button
+            onClick={login}
+            className="px-8 py-3 rounded-xl text-sm font-semibold text-white"
+            style={{ background: 'rgba(255,68,102,0.15)', border: '1px solid rgba(255,68,102,0.4)' }}
+          >
+            Sign In
+          </button>
         </div>
       </div>
     );
@@ -162,7 +181,7 @@ export default function AdminPage() {
           <p className="text-5xl mb-4">⛔</p>
           <h2 className="text-2xl font-bold" style={{ color: '#ff4466' }}>{t.accessDenied}</h2>
           <p className="mt-2" style={{ color: '#666' }}>{t.noPermission}</p>
-          <p className="text-xs mt-2 font-mono" style={{ color: '#555' }}>{address}</p>
+          <p className="text-xs mt-2 font-mono" style={{ color: '#555' }}>{email || address || 'Unknown'}</p>
         </div>
       </div>
     );

@@ -1,11 +1,13 @@
-import { getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { createConfig, http } from 'wagmi';
 import { mainnet, polygon, bsc, sepolia } from 'wagmi/chains';
 
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'ea62d38d46a01a1b9d8397562fe5097f';
-
-export const config = getDefaultConfig({
-  appName: 'TetherRoll',
-  projectId,
+export const config = createConfig({
   chains: [mainnet, polygon, bsc, sepolia],
+  transports: {
+    [mainnet.id]: http(),
+    [polygon.id]: http(),
+    [bsc.id]: http(),
+    [sepolia.id]: http(),
+  },
   ssr: true,
 });

@@ -1,22 +1,31 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useAccount } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAuth } from '@/hooks/useAuth';
 import { MOCK_POOLS, MOCK_ESCROWS } from '@/lib/mockData';
 import PoolCard from '@/components/pools/PoolCard';
+import SignInPrompt from '@/components/auth/SignInPrompt';
 
 export default function ProfilePage() {
-  const { address, isConnected } = useAccount();
+  const { user, authenticated, ready } = useAuth();
+  const address = user?.wallet?.address;
 
-  if (!isConnected) {
+  if (!ready) {
+    return (
+      <div className="min-h-screen pt-20 flex items-center justify-center" style={{ background: '#080808' }}>
+        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#00c9a7', borderTopColor: 'transparent' }} />
+      </div>
+    );
+  }
+
+  if (!authenticated) {
     return (
       <div className="min-h-screen pt-20 flex items-center justify-center" style={{ background: '#080808' }}>
         <div className="text-center p-12 rounded-3xl" style={{ background: '#111', border: '1px solid #1f1f1f' }}>
           <p className="text-5xl mb-4">👤</p>
           <h2 className="text-2xl font-bold text-white mb-2">My Page</h2>
-          <p className="mb-6" style={{ color: '#666' }}>Please connect your wallet</p>
-          <ConnectButton />
+          <p className="mb-6" style={{ color: '#666' }}>Please sign in to view your profile</p>
+          <SignInPrompt />
         </div>
       </div>
     );

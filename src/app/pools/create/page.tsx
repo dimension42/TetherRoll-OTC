@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAccount } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { SUPPORTED_TOKENS, FIAT_CURRENCIES } from '@/lib/constants';
+import SignInPrompt from '@/components/auth/SignInPrompt';
 import Tilt from 'react-parallax-tilt';
 
 type Step = 1 | 2 | 3 | 4;
@@ -19,7 +19,9 @@ const STEPS = [
 ];
 
 export default function CreatePoolPage() {
-  const { address, isConnected, chainId } = useAccount();
+  const { user, authenticated, ready } = useAuth();
+  const address = user?.wallet?.address;
+  const chainId = 11155111;
   const router = useRouter();
 
   const [step, setStep] = useState<Step>(1);
@@ -52,14 +54,22 @@ export default function CreatePoolPage() {
     router.push('/pools');
   };
 
-  if (!isConnected) {
+  if (!ready) {
+    return (
+      <div className="min-h-screen pt-20 flex items-center justify-center" style={{ background: '#080808' }}>
+        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#00c9a7', borderTopColor: 'transparent' }} />
+      </div>
+    );
+  }
+
+  if (!authenticated) {
     return (
       <div className="min-h-screen pt-20 flex items-center justify-center grid-bg" style={{ background: '#080808' }}>
         <div className="text-center p-12 rounded-3xl" style={{ background: '#111', border: '1px solid #1f1f1f' }}>
           <p className="text-5xl mb-4">🔗</p>
-          <h2 className="text-2xl font-bold text-white mb-2">Wallet Connection Required</h2>
-          <p className="mb-6" style={{ color: '#666' }}>Please connect your wallet to register a pool</p>
-          <ConnectButton />
+          <h2 className="text-2xl font-bold text-white mb-2">Sign In Required</h2>
+          <p className="mb-6" style={{ color: '#666' }}>Please sign in to register a pool</p>
+          <SignInPrompt />
         </div>
       </div>
     );

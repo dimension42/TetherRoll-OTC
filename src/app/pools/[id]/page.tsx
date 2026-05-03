@@ -3,10 +3,10 @@
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { useAccount } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAuth } from '@/hooks/useAuth';
 import { MOCK_POOLS } from '@/lib/mockData';
 import { formatDistanceToNow, format } from 'date-fns';
+import SignInPrompt from '@/components/auth/SignInPrompt';
 
 function shortenAddr(addr: string) {
   return addr.slice(0, 6) + '...' + addr.slice(-4);
@@ -14,7 +14,9 @@ function shortenAddr(addr: string) {
 
 export default function PoolDetailPage() {
   const { id } = useParams();
-  const { address, isConnected } = useAccount();
+  const { user, authenticated } = useAuth();
+  const address = user?.wallet?.address;
+  const isConnected = authenticated;
   const pool = MOCK_POOLS.find(p => p.id === id);
 
   if (!pool) {
@@ -117,7 +119,7 @@ export default function PoolDetailPage() {
               {/* Action buttons */}
               {!isConnected ? (
                 <div className="flex justify-center">
-                  <ConnectButton label="Connect Wallet to Trade" />
+                  <SignInPrompt label="Sign In to Trade" />
                 </div>
               ) : isOwner ? (
                 <div className="flex gap-3">

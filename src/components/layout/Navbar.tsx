@@ -2,21 +2,27 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount } from 'wagmi';
+import { useAuth } from '@/hooks/useAuth';
 import { ADMIN_ADDRESSES } from '@/lib/constants';
+import LoginButton from '@/components/auth/LoginButton';
 
 const navLinks = [
   { href: '/pools', label: 'Pools' },
   { href: '/escrow', label: 'Escrow' },
+  { href: '/deposit', label: 'Deposit' },
   { href: '/features', label: 'Features' },
-  { href: '/profile', label: 'Profile' },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { address } = useAccount();
-  const isAdmin = address && ADMIN_ADDRESSES.map(a => a.toLowerCase()).includes(address.toLowerCase());
+  const { user, authenticated } = useAuth();
+
+  const walletAddress = user?.wallet?.address;
+  const email = user?.email?.address || user?.google?.email;
+  const isAdmin = authenticated && (
+    (walletAddress && ADMIN_ADDRESSES.map(a => a.toLowerCase()).includes(walletAddress.toLowerCase())) ||
+    (email && ADMIN_EMAILS.includes(email.toLowerCase()))
+  );
 
   return (
     <header
@@ -30,7 +36,6 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center text-black font-black text-sm"
@@ -43,7 +48,6 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Nav Links */}
           <nav className="hidden md:flex items-center gap-1">
             {navLinks.map(link => (
               <Link
@@ -73,7 +77,6 @@ export default function Navbar() {
             )}
           </nav>
 
-          {/* Connect Wallet */}
           <div className="flex items-center gap-3">
             <Link
               href="/pools/create"
@@ -81,14 +84,15 @@ export default function Navbar() {
             >
               + New Pool
             </Link>
-            <ConnectButton
-              accountStatus="avatar"
-              chainStatus="icon"
-              showBalance={false}
-            />
+            <LoginButton />
           </div>
         </div>
       </div>
     </header>
   );
 }
+
+const ADMIN_EMAILS = [
+  'admin@tetherroll.com',
+  'culture@culturing.org',
+];
