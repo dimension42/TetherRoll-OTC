@@ -1,12 +1,11 @@
 'use client';
 
 import { motion, useInView } from 'framer-motion';
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, lazy, Suspense } from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import Tilt from 'react-parallax-tilt';
 
-const SecurityScene = dynamic(() => import('./SecurityScene'), { ssr: false });
+const SecurityScene = lazy(() => import('./SecurityScene'));
 
 // ─── Animated Counter ───────────────────────────────────────────────────────
 function Counter({ target, suffix = '' }: { target: number; suffix?: string }) {
@@ -162,6 +161,9 @@ const stats = [
 ];
 
 export default function FeaturesPage() {
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => { setIsClient(true); }, []);
+
   return (
     <div className="min-h-screen bg-[#080808] pt-20">
       {/* ─── Hero Section ─────────────────────────────────────────────── */}
@@ -252,7 +254,7 @@ export default function FeaturesPage() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <SecurityScene />
+            {isClient && <Suspense fallback={null}><SecurityScene /></Suspense>}
           </motion.div>
         </div>
       </section>

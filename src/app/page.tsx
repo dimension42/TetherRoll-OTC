@@ -1,22 +1,25 @@
 'use client';
 
-import dynamic from 'next/dynamic';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import StatsBar from '@/components/home/StatsBar';
 import FeatureCards from '@/components/home/FeatureCards';
 import HowItWorks from '@/components/home/HowItWorks';
 
-const HeroScene = dynamic(() => import('@/components/home/HeroScene'), { ssr: false });
+const HeroScene = lazy(() => import('@/components/home/HeroScene'));
 
 export default function HomePage() {
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => { setIsClient(true); }, []);
+
   return (
     <div className="grid-bg min-h-screen">
       {/* Hero */}
       <section className="relative min-h-screen flex items-center overflow-hidden pt-16">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute right-0 top-0 w-full md:w-2/3 h-full opacity-70">
-            <HeroScene />
+            {isClient && <Suspense fallback={null}><HeroScene /></Suspense>}
           </div>
           <div
             className="absolute inset-0"
