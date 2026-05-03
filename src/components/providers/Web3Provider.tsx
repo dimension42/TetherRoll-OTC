@@ -14,12 +14,12 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
           theme={darkTheme({
-            accentColor: '#f0b429',
+            accentColor: '#00c9a7',
             accentColorForeground: '#000',
             borderRadius: 'medium',
             overlayBlur: 'small',
           })}
-          locale="ko"
+          locale="en"
         >
           {children}
         </RainbowKitProvider>

@@ -17,12 +17,12 @@ function GoldSphere() {
     <Float speed={2} rotationIntensity={0.5} floatIntensity={0.8}>
       <Sphere ref={meshRef} args={[1.4, 64, 64]} position={[0, 0, 0]}>
         <MeshDistortMaterial
-          color="#f0b429"
+          color="#00c9a7"
           distort={0.35}
           speed={2}
           roughness={0.1}
           metalness={0.9}
-          emissive="#c9922a"
+          emissive="#00a88a"
           emissiveIntensity={0.3}
         />
       </Sphere>
@@ -70,7 +70,7 @@ function FloatingParticles() {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
-      <pointsMaterial color="#f0b429" size={0.025} transparent opacity={0.6} sizeAttenuation />
+      <pointsMaterial color="#00c9a7" size={0.025} transparent opacity={0.6} sizeAttenuation />
     </points>
   );
 }
@@ -84,12 +84,12 @@ export default function HeroScene() {
         style={{ background: 'transparent' }}
       >
         <ambientLight intensity={0.4} />
-        <pointLight position={[5, 5, 5]} intensity={2} color="#f0b429" />
+        <pointLight position={[5, 5, 5]} intensity={2} color="#00c9a7" />
         <pointLight position={[-5, -3, -5]} intensity={1} color="#6366f1" />
         <spotLight position={[0, 8, 0]} intensity={1.5} color="#ffffff" />
 
         <GoldSphere />
-        <OrbitRing radius={2.2} speed={0.4} color="#f0b429" />
+        <OrbitRing radius={2.2} speed={0.4} color="#00c9a7" />
         <OrbitRing radius={3} speed={-0.25} color="#6366f1" />
         <OrbitRing radius={3.8} speed={0.15} color="#00ff88" />
         <FloatingParticles />

@@ -33,7 +33,7 @@ export default function HomePage() {
           >
             <div
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6"
-              style={{ background: 'rgba(240,180,41,0.1)', border: '1px solid rgba(240,180,41,0.2)', color: '#f0b429' }}
+              style={{ background: 'rgba(0,201,167,0.1)', border: '1px solid rgba(0,201,167,0.2)', color: '#00c9a7' }}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 pulse-dot" />
               Live on Sepolia Testnet
@@ -45,16 +45,16 @@ export default function HomePage() {
             </h1>
 
             <p className="text-lg md:text-xl mb-8 leading-relaxed" style={{ color: '#999' }}>
-              온체인 에스크로로 보호되는 완전 탈중앙화 OTC 거래 플랫폼.<br />
-              현금 거래도 스마트 컨트랙트가 보장합니다.
+              Fully decentralized OTC trading platform secured by on-chain escrow.<br />
+              Even cash trades are guaranteed by smart contracts.
             </p>
 
             <div className="flex flex-wrap gap-4 mb-12">
               <Link href="/pools" className="btn-primary text-base px-8 py-4">
-                Pool 탐색
+                Explore Pools
               </Link>
               <Link href="/pools/create" className="btn-secondary text-base px-8 py-4">
-                거래 등록
+                Create Trade
               </Link>
             </div>
 
@@ -98,15 +98,15 @@ export default function HomePage() {
             viewport={{ once: true }}
             className="p-12 rounded-3xl"
             style={{
-              background: 'linear-gradient(135deg, rgba(240,180,41,0.08), rgba(99,102,241,0.08))',
-              border: '1px solid rgba(240,180,41,0.15)',
+              background: 'linear-gradient(135deg, rgba(0,201,167,0.08), rgba(99,102,241,0.08))',
+              border: '1px solid rgba(0,201,167,0.15)',
             }}
           >
-            <h2 className="text-4xl md:text-5xl font-black text-white mb-4">지금 바로 시작하세요</h2>
-            <p className="text-lg mb-8" style={{ color: '#888' }}>지갑을 연결하고 첫 OTC Pool을 등록해보세요</p>
+            <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Get Started Now</h2>
+            <p className="text-lg mb-8" style={{ color: '#888' }}>Connect your wallet and register your first OTC Pool</p>
             <div className="flex flex-wrap gap-4 justify-center">
-              <Link href="/pools/create" className="btn-primary text-base px-10 py-4">Pool 등록하기</Link>
-              <Link href="/pools" className="btn-secondary text-base px-10 py-4">Pool 목록 보기</Link>
+              <Link href="/pools/create" className="btn-primary text-base px-10 py-4">Register Pool</Link>
+              <Link href="/pools" className="btn-secondary text-base px-10 py-4">View Pools</Link>
             </div>
           </motion.div>
         </div>
@@ -116,10 +116,10 @@ export default function HomePage() {
       <footer className="py-8 px-4" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded flex items-center justify-center text-black font-black text-xs" style={{ background: 'linear-gradient(135deg, #f0b429, #c9922a)' }}>OTC</div>
-            <span className="text-sm font-semibold text-white">OTC Platform</span>
+            <div className="w-6 h-6 rounded flex items-center justify-center text-black font-black text-xs" style={{ background: 'linear-gradient(135deg, #00c9a7, #00a88a)' }}>TR</div>
+            <span className="text-sm font-semibold text-white">TetherRoll</span>
           </div>
-          <p className="text-xs" style={{ color: '#555' }}>© 2026 OTC Platform. Smart contracts audited. Non-custodial.</p>
+          <p className="text-xs" style={{ color: '#555' }}>© 2026 TetherRoll. Smart contracts audited. Non-custodial.</p>
           <div className="flex gap-6">
             {['Docs', 'Github', 'Discord'].map(l => (
               <a key={l} href="#" className="text-xs transition-colors hover:text-white" style={{ color: '#555' }}>{l}</a>

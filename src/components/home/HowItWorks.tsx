@@ -5,29 +5,29 @@ import { motion } from 'framer-motion';
 const steps = [
   {
     num: '01',
-    title: '지갑 연결',
-    desc: 'MetaMask, WalletConnect 등 원하는 지갑으로 연결합니다.',
+    title: 'Connect Wallet',
+    desc: 'Connect with MetaMask, WalletConnect, or any supported wallet.',
     icon: '🔗',
     color: '#6366f1',
   },
   {
     num: '02',
-    title: 'Pool 등록',
-    desc: '제공할 자산과 원하는 자산(Crypto 또는 현금)을 등록하고 보증금을 납입합니다.',
+    title: 'Register Pool',
+    desc: 'Set your offer & request assets (crypto or cash) and deposit collateral.',
     icon: '📋',
-    color: '#f0b429',
+    color: '#00c9a7',
   },
   {
     num: '03',
-    title: '매칭 & 에스크로',
-    desc: '상대방과 매칭되면 양측 자산이 스마트 컨트랙트 에스크로에 잠금됩니다.',
+    title: 'Match & Escrow',
+    desc: 'Once matched, both parties\' assets are locked in smart contract escrow.',
     icon: '🤝',
     color: '#00ff88',
   },
   {
     num: '04',
-    title: '거래 & 확인',
-    desc: 'Crypto↔Fiat는 오프라인 현금 교환 후 confirmDelivery로 온체인 정산됩니다.',
+    title: 'Trade & Confirm',
+    desc: 'For Crypto↔Fiat, confirm cash delivery to trigger on-chain settlement.',
     icon: '✅',
     color: '#f472b6',
   },
@@ -44,11 +44,11 @@ export default function HowItWorks() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <p className="text-sm font-semibold tracking-widest uppercase mb-3" style={{ color: '#f0b429' }}>
+          <p className="text-sm font-semibold tracking-widest uppercase mb-3" style={{ color: '#00c9a7' }}>
             How It Works
           </p>
           <h2 className="text-4xl md:text-5xl font-bold text-white">
-            4단계로 완성되는 OTC 거래
+            OTC Trading in 4 Steps
           </h2>
         </motion.div>
 
@@ -56,7 +56,7 @@ export default function HowItWorks() {
           {/* Connecting line */}
           <div
             className="absolute top-12 left-0 right-0 h-px hidden lg:block"
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(240,180,41,0.3), transparent)' }}
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(0,201,167,0.3), transparent)' }}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">

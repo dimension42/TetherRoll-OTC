@@ -1,5 +1,8 @@
 import type { Pool, Escrow } from './types';
 
+// Fixed reference timestamp to avoid hydration mismatch (May 2025)
+const NOW = 1746200000000;
+
 export const MOCK_POOLS: Pool[] = [
   {
     id: '1', poolId: 1,
@@ -10,7 +13,7 @@ export const MOCK_POOLS: Pool[] = [
     isFiat: true, fiatCurrency: 'KRW', fiatAmount: '12000000',
     depositAmount: '0.1',
     status: 'OPEN', filledPercent: 0,
-    createdAt: Date.now() - 3600000, expiresAt: Date.now() + 86400000 * 3,
+    createdAt: NOW - 3600000, expiresAt: NOW + 86400000 * 3,
     tradeType: 'CRYPTO_FIAT', chainId: 11155111,
   },
   {
@@ -23,7 +26,7 @@ export const MOCK_POOLS: Pool[] = [
     isFiat: false,
     depositAmount: '500',
     status: 'OPEN', filledPercent: 3500,
-    createdAt: Date.now() - 7200000, expiresAt: Date.now() + 86400000 * 7,
+    createdAt: NOW - 7200000, expiresAt: NOW + 86400000 * 7,
     tradeType: 'CRYPTO_CRYPTO', chainId: 11155111,
   },
   {
@@ -35,7 +38,7 @@ export const MOCK_POOLS: Pool[] = [
     isFiat: true, fiatCurrency: 'KRW', fiatAmount: '8500000',
     depositAmount: '425000',
     status: 'PARTIAL', filledPercent: 6000,
-    createdAt: Date.now() - 14400000, expiresAt: Date.now() + 86400000 * 2,
+    createdAt: NOW - 14400000, expiresAt: NOW + 86400000 * 2,
     tradeType: 'FIAT_CRYPTO', chainId: 11155111,
   },
   {
@@ -48,7 +51,7 @@ export const MOCK_POOLS: Pool[] = [
     isFiat: false,
     depositAmount: '0.3',
     status: 'MATCHED', filledPercent: 10000,
-    createdAt: Date.now() - 86400000, expiresAt: Date.now() + 86400000,
+    createdAt: NOW - 86400000, expiresAt: NOW + 86400000,
     tradeType: 'CRYPTO_CRYPTO', chainId: 11155111,
   },
   {
@@ -61,7 +64,7 @@ export const MOCK_POOLS: Pool[] = [
     isFiat: true, fiatCurrency: 'USD', fiatAmount: '35000',
     depositAmount: '1750',
     status: 'OPEN', filledPercent: 0,
-    createdAt: Date.now() - 1800000, expiresAt: Date.now() + 86400000 * 5,
+    createdAt: NOW - 1800000, expiresAt: NOW + 86400000 * 5,
     tradeType: 'CRYPTO_FIAT', chainId: 137,
   },
   {
@@ -74,7 +77,7 @@ export const MOCK_POOLS: Pool[] = [
     isFiat: false,
     depositAmount: '0.05',
     status: 'COMPLETED', filledPercent: 10000,
-    createdAt: Date.now() - 172800000, expiresAt: Date.now() - 86400000,
+    createdAt: NOW - 172800000, expiresAt: NOW - 86400000,
     tradeType: 'CRYPTO_CRYPTO', chainId: 11155111,
   },
 ];
@@ -87,10 +90,10 @@ export const MOCK_ESCROWS: Escrow[] = [
     assetASymbol: 'ETH', assetAAmount: '2.5',
     assetBSymbol: 'KRW', assetBAmount: '12000000',
     status: 'ACTIVE',
-    deadline: Date.now() + 86400000 * 2,
+    deadline: NOW + 86400000 * 2,
     feeAmount: '0.0125', penaltyAmount: '0.1',
     isFiat: true, fiatCurrency: 'KRW',
-    createdAt: Date.now() - 3600000, chainId: 11155111,
+    createdAt: NOW - 3600000, chainId: 11155111,
   },
   {
     id: '2', escrowId: 2, poolId: 2,
@@ -99,10 +102,10 @@ export const MOCK_ESCROWS: Escrow[] = [
     assetASymbol: 'USDC', assetAAmount: '10000',
     assetBSymbol: 'ETH', assetBAmount: '4.2',
     status: 'PENDING',
-    deadline: Date.now() + 86400000 * 3,
+    deadline: NOW + 86400000 * 3,
     feeAmount: '50', penaltyAmount: '500',
     isFiat: false,
-    createdAt: Date.now() - 1800000, chainId: 11155111,
+    createdAt: NOW - 1800000, chainId: 11155111,
   },
   {
     id: '3', escrowId: 3, poolId: 1,
@@ -111,9 +114,9 @@ export const MOCK_ESCROWS: Escrow[] = [
     assetASymbol: 'ETH', assetAAmount: '1',
     assetBSymbol: 'USDT', assetBAmount: '2400',
     status: 'DISPUTED',
-    deadline: Date.now() + 86400000,
+    deadline: NOW + 86400000,
     feeAmount: '0.005', penaltyAmount: '0.05',
     isFiat: false,
-    createdAt: Date.now() - 86400000, chainId: 11155111,
+    createdAt: NOW - 86400000, chainId: 11155111,
   },
 ];

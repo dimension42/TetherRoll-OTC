@@ -61,14 +61,14 @@ export default function PoolsPage() {
               animate={{ opacity: 1, y: 0 }}
               className="text-4xl font-black text-white mb-2"
             >
-              OTC Pool 탐색
+              Explore OTC Pools
             </motion.h1>
             <p style={{ color: '#666' }}>
-              <span className="font-semibold" style={{ color: '#f0b429' }}>{MOCK_POOLS.filter(p => p.status === 'OPEN' || p.status === 'PARTIAL').length}</span>개 활성 Pool
+              <span className="font-semibold" style={{ color: '#00c9a7' }}>{MOCK_POOLS.filter(p => p.status === 'OPEN' || p.status === 'PARTIAL').length}</span> active pools
             </p>
           </div>
           <Link href="/pools/create" className="btn-primary shrink-0">
-            + New Pool 등록
+            + New Pool
           </Link>
         </div>
 
@@ -81,7 +81,7 @@ export default function PoolsPage() {
             {/* Search */}
             <input
               className="input-dark"
-              placeholder="토큰, 지갑 주소로 검색..."
+              placeholder="Search by token or wallet address..."
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
@@ -95,9 +95,9 @@ export default function PoolsPage() {
                     onClick={() => setStatusFilter(f.value)}
                     className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200"
                     style={{
-                      background: statusFilter === f.value ? 'rgba(240,180,41,0.15)' : 'rgba(255,255,255,0.04)',
-                      color: statusFilter === f.value ? '#f0b429' : '#888',
-                      border: `1px solid ${statusFilter === f.value ? 'rgba(240,180,41,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                      background: statusFilter === f.value ? 'rgba(0,201,167,0.15)' : 'rgba(255,255,255,0.04)',
+                      color: statusFilter === f.value ? '#00c9a7' : '#888',
+                      border: `1px solid ${statusFilter === f.value ? 'rgba(0,201,167,0.3)' : 'rgba(255,255,255,0.07)'}`,
                     }}
                   >
                     {f.label}
@@ -111,9 +111,9 @@ export default function PoolsPage() {
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value as typeof sortBy)}
               >
-                <option value="newest">최신순</option>
-                <option value="amount">금액순</option>
-                <option value="fill">충족률순</option>
+                <option value="newest">Newest</option>
+                <option value="amount">Amount</option>
+                <option value="fill">Fill Rate</option>
               </select>
             </div>
 
@@ -141,8 +141,8 @@ export default function PoolsPage() {
         {filtered.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-5xl mb-4">🔍</p>
-            <p className="text-xl font-semibold text-white mb-2">Pool을 찾을 수 없습니다</p>
-            <p style={{ color: '#666' }}>다른 조건으로 검색해보세요</p>
+            <p className="text-xl font-semibold text-white mb-2">No pools found</p>
+            <p style={{ color: '#666' }}>Try different search criteria</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

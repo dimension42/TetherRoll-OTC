@@ -9,8 +9,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        gold: "#f0b429",
-        "gold-dim": "#c9922a",
+        accent: "#00c9a7",
+        "accent-dim": "#00a88a",
         "surface": "#111111",
         "surface-2": "#1a1a1a",
         "border-dark": "#2a2a2a",

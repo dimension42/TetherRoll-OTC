@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAccount, useBalance } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useRouter } from 'next/navigation';
 import { SUPPORTED_TOKENS, FIAT_CURRENCIES } from '@/lib/constants';
@@ -12,10 +12,10 @@ type Step = 1 | 2 | 3 | 4;
 type TradeMode = 'CRYPTO_CRYPTO' | 'CRYPTO_FIAT' | 'FIAT_CRYPTO';
 
 const STEPS = [
-  { num: 1, label: '거래 유형' },
-  { num: 2, label: '자산 설정' },
-  { num: 3, label: '보증금' },
-  { num: 4, label: '확인 & 등록' },
+  { num: 1, label: 'Trade Type' },
+  { num: 2, label: 'Assets' },
+  { num: 3, label: 'Deposit' },
+  { num: 4, label: 'Confirm' },
 ];
 
 export default function CreatePoolPage() {
@@ -48,7 +48,7 @@ export default function CreatePoolPage() {
     setIsSubmitting(true);
     await new Promise(r => setTimeout(r, 2000));
     setIsSubmitting(false);
-    alert('Pool 등록 완료! (컨트랙트 배포 후 실제 트랜잭션 발생)');
+    alert('Pool registered! (Actual transaction will occur after contract deployment)');
     router.push('/pools');
   };
 
@@ -57,8 +57,8 @@ export default function CreatePoolPage() {
       <div className="min-h-screen pt-20 flex items-center justify-center grid-bg" style={{ background: '#080808' }}>
         <div className="text-center p-12 rounded-3xl" style={{ background: '#111', border: '1px solid #1f1f1f' }}>
           <p className="text-5xl mb-4">🔗</p>
-          <h2 className="text-2xl font-bold text-white mb-2">지갑 연결 필요</h2>
-          <p className="mb-6" style={{ color: '#666' }}>Pool 등록을 위해 지갑을 연결해주세요</p>
+          <h2 className="text-2xl font-bold text-white mb-2">Wallet Connection Required</h2>
+          <p className="mb-6" style={{ color: '#666' }}>Please connect your wallet to register a pool</p>
           <ConnectButton />
         </div>
       </div>
@@ -70,8 +70,8 @@ export default function CreatePoolPage() {
       <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-black text-white mb-2">Pool 등록</h1>
-          <p style={{ color: '#666' }}>OTC 거래 조건을 설정하고 보증금을 납입합니다</p>
+          <h1 className="text-3xl font-black text-white mb-2">Register Pool</h1>
+          <p style={{ color: '#666' }}>Set your OTC trade terms and deposit collateral</p>
         </div>
 
         {/* Stepper */}
@@ -83,23 +83,23 @@ export default function CreatePoolPage() {
                   className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300"
                   style={{
                     background: step >= s.num
-                      ? 'linear-gradient(135deg, #f0b429, #c9922a)'
+                      ? 'linear-gradient(135deg, #00c9a7, #00a88a)'
                       : 'rgba(255,255,255,0.05)',
                     color: step >= s.num ? '#000' : '#555',
-                    border: step === s.num ? '2px solid #f0b429' : '2px solid transparent',
-                    boxShadow: step === s.num ? '0 0 16px rgba(240,180,41,0.4)' : 'none',
+                    border: step === s.num ? '2px solid #00c9a7' : '2px solid transparent',
+                    boxShadow: step === s.num ? '0 0 16px rgba(0,201,167,0.4)' : 'none',
                   }}
                 >
                   {step > s.num ? '✓' : s.num}
                 </div>
-                <p className="text-xs mt-1 hidden sm:block" style={{ color: step === s.num ? '#f0b429' : '#555' }}>
+                <p className="text-xs mt-1 hidden sm:block" style={{ color: step === s.num ? '#00c9a7' : '#555' }}>
                   {s.label}
                 </p>
               </div>
               {i < STEPS.length - 1 && (
                 <div
                   className="flex-1 h-px mx-2 transition-all duration-500"
-                  style={{ background: step > s.num ? '#f0b429' : '#1f1f1f' }}
+                  style={{ background: step > s.num ? '#00c9a7' : '#1f1f1f' }}
                 />
               )}
             </div>
@@ -109,32 +109,32 @@ export default function CreatePoolPage() {
         {/* Form card */}
         <Tilt tiltMaxAngleX={2} tiltMaxAngleY={2} glareEnable glareMaxOpacity={0.03} transitionSpeed={800}>
           <div className="rounded-2xl overflow-hidden" style={{ background: '#111', border: '1px solid #1f1f1f' }}>
-            <div className="h-1" style={{ background: 'linear-gradient(90deg, #f0b429, #6366f1, #00ff88)' }} />
+            <div className="h-1" style={{ background: 'linear-gradient(90deg, #00c9a7, #6366f1, #00ff88)' }} />
             <div className="p-8">
               <AnimatePresence mode="wait">
                 {/* Step 1 - Trade type */}
                 {step === 1 && (
                   <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                    <h2 className="text-xl font-bold text-white mb-6">거래 유형 선택</h2>
+                    <h2 className="text-xl font-bold text-white mb-6">Select Trade Type</h2>
                     <div className="grid gap-4">
                       {([
-                        { value: 'CRYPTO_FIAT', title: 'Crypto → Fiat', desc: '코인을 팔고 현금을 받습니다', icon: '₿→₩' },
-                        { value: 'FIAT_CRYPTO', title: 'Fiat → Crypto', desc: '현금을 내고 코인을 삽니다', icon: '₩→₿' },
-                        { value: 'CRYPTO_CRYPTO', title: 'Crypto ↔ Crypto', desc: '코인과 코인을 교환합니다', icon: '⟠↔⟠' },
+                        { value: 'CRYPTO_FIAT', title: 'Crypto → Fiat', desc: 'Sell crypto and receive cash', icon: '₿→$' },
+                        { value: 'FIAT_CRYPTO', title: 'Fiat → Crypto', desc: 'Pay cash and receive crypto', icon: '$→₿' },
+                        { value: 'CRYPTO_CRYPTO', title: 'Crypto ↔ Crypto', desc: 'Swap one crypto for another', icon: '⟠↔⟠' },
                       ] as const).map(opt => (
                         <button
                           key={opt.value}
                           onClick={() => setTradeMode(opt.value)}
                           className="p-4 rounded-xl text-left transition-all duration-200"
                           style={{
-                            background: tradeMode === opt.value ? 'rgba(240,180,41,0.08)' : 'rgba(255,255,255,0.03)',
-                            border: `1px solid ${tradeMode === opt.value ? 'rgba(240,180,41,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                            background: tradeMode === opt.value ? 'rgba(0,201,167,0.08)' : 'rgba(255,255,255,0.03)',
+                            border: `1px solid ${tradeMode === opt.value ? 'rgba(0,201,167,0.4)' : 'rgba(255,255,255,0.07)'}`,
                           }}
                         >
                           <div className="flex items-center gap-4">
                             <div
                               className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black"
-                              style={{ background: tradeMode === opt.value ? 'rgba(240,180,41,0.2)' : 'rgba(255,255,255,0.05)', color: '#f0b429' }}
+                              style={{ background: tradeMode === opt.value ? 'rgba(0,201,167,0.2)' : 'rgba(255,255,255,0.05)', color: '#00c9a7' }}
                             >
                               {opt.icon}
                             </div>
@@ -153,27 +153,27 @@ export default function CreatePoolPage() {
                 {/* Step 2 - Asset setup */}
                 {step === 2 && (
                   <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                    <h2 className="text-xl font-bold text-white mb-6">자산 설정</h2>
+                    <h2 className="text-xl font-bold text-white mb-6">Asset Configuration</h2>
 
                     {/* Offer asset */}
                     <div className="mb-6">
-                      <label className="block text-sm font-medium mb-2" style={{ color: '#f0b429' }}>
-                        제공할 자산 (Offer)
+                      <label className="block text-sm font-medium mb-2" style={{ color: '#00c9a7' }}>
+                        Offer Asset
                       </label>
                       {tradeMode !== 'FIAT_CRYPTO' ? (
                         <div className="flex gap-3">
                           <select className="input-dark w-32 shrink-0" value={offerToken} onChange={e => setOfferToken(e.target.value)}>
-                            <option value="">토큰 선택</option>
+                            <option value="">Select token</option>
                             {tokens.map(t => <option key={t.address} value={t.address}>{t.icon} {t.symbol}</option>)}
                           </select>
-                          <input className="input-dark" placeholder="수량 입력" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} type="number" min="0" />
+                          <input className="input-dark" placeholder="Enter amount" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} type="number" min="0" />
                         </div>
                       ) : (
                         <div className="flex gap-3">
                           <select className="input-dark w-32 shrink-0" value={fiatCurrency} onChange={e => setFiatCurrency(e.target.value)}>
                             {FIAT_CURRENCIES.map(f => <option key={f.code} value={f.code}>{f.flag} {f.code}</option>)}
                           </select>
-                          <input className="input-dark" placeholder="금액 입력" value={fiatAmount} onChange={e => setFiatAmount(e.target.value)} type="number" min="0" />
+                          <input className="input-dark" placeholder="Enter amount" value={fiatAmount} onChange={e => setFiatAmount(e.target.value)} type="number" min="0" />
                         </div>
                       )}
                     </div>
@@ -181,29 +181,29 @@ export default function CreatePoolPage() {
                     {/* Request asset */}
                     <div className="mb-6">
                       <label className="block text-sm font-medium mb-2" style={{ color: '#00ff88' }}>
-                        요청할 자산 (Request)
+                        Request Asset
                       </label>
                       {tradeMode !== 'CRYPTO_FIAT' ? (
                         <div className="flex gap-3">
                           <select className="input-dark w-32 shrink-0" value={requestToken} onChange={e => setRequestToken(e.target.value)}>
-                            <option value="">토큰 선택</option>
+                            <option value="">Select token</option>
                             {tokens.map(t => <option key={t.address} value={t.address}>{t.icon} {t.symbol}</option>)}
                           </select>
-                          <input className="input-dark" placeholder="수량 입력" value={requestAmount} onChange={e => setRequestAmount(e.target.value)} type="number" min="0" />
+                          <input className="input-dark" placeholder="Enter amount" value={requestAmount} onChange={e => setRequestAmount(e.target.value)} type="number" min="0" />
                         </div>
                       ) : (
                         <div className="flex gap-3">
                           <select className="input-dark w-32 shrink-0" value={fiatCurrency} onChange={e => setFiatCurrency(e.target.value)}>
                             {FIAT_CURRENCIES.map(f => <option key={f.code} value={f.code}>{f.flag} {f.code}</option>)}
                           </select>
-                          <input className="input-dark" placeholder="금액 입력" value={fiatAmount} onChange={e => setFiatAmount(e.target.value)} type="number" min="0" />
+                          <input className="input-dark" placeholder="Enter amount" value={fiatAmount} onChange={e => setFiatAmount(e.target.value)} type="number" min="0" />
                         </div>
                       )}
                     </div>
 
                     {/* Expiry */}
                     <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: '#888' }}>만료 기간</label>
+                      <label className="block text-sm font-medium mb-2" style={{ color: '#888' }}>Expiry Period</label>
                       <div className="flex gap-2">
                         {['1', '3', '7', '14', '30'].map(d => (
                           <button
@@ -211,12 +211,12 @@ export default function CreatePoolPage() {
                             onClick={() => setExpiryDays(d)}
                             className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
                             style={{
-                              background: expiryDays === d ? 'rgba(240,180,41,0.15)' : 'rgba(255,255,255,0.04)',
-                              color: expiryDays === d ? '#f0b429' : '#666',
-                              border: `1px solid ${expiryDays === d ? 'rgba(240,180,41,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                              background: expiryDays === d ? 'rgba(0,201,167,0.15)' : 'rgba(255,255,255,0.04)',
+                              color: expiryDays === d ? '#00c9a7' : '#666',
+                              border: `1px solid ${expiryDays === d ? 'rgba(0,201,167,0.3)' : 'rgba(255,255,255,0.07)'}`,
                             }}
                           >
-                            {d}일
+                            {d}d
                           </button>
                         ))}
                       </div>
@@ -227,23 +227,23 @@ export default function CreatePoolPage() {
                 {/* Step 3 - Deposit */}
                 {step === 3 && (
                   <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                    <h2 className="text-xl font-bold text-white mb-2">보증금 설정</h2>
+                    <h2 className="text-xl font-bold text-white mb-2">Deposit Setup</h2>
                     <p className="text-sm mb-6" style={{ color: '#666' }}>
-                      보증금은 거래 이행 보장을 위해 에스크로에 잠금됩니다. 거래 완료 후 전액 환불됩니다.
+                      The deposit is locked in escrow to guarantee trade fulfillment. Fully refunded upon completion.
                     </p>
 
                     <div
                       className="p-4 rounded-xl mb-6"
-                      style={{ background: 'rgba(240,180,41,0.05)', border: '1px solid rgba(240,180,41,0.15)' }}
+                      style={{ background: 'rgba(0,201,167,0.05)', border: '1px solid rgba(0,201,167,0.15)' }}
                     >
-                      <p className="text-sm font-semibold mb-1" style={{ color: '#f0b429' }}>⚠️ 보증금 역할</p>
+                      <p className="text-sm font-semibold mb-1" style={{ color: '#00c9a7' }}>⚠️ Deposit Purpose</p>
                       <p className="text-sm" style={{ color: '#888' }}>
-                        상대방이 현장에 나타나지 않거나 거래를 파기할 경우, 보증금이 패널티로 귀하에게 지급됩니다.
+                        If the counterparty fails to show up or breaches the trade, the deposit is paid to you as a penalty.
                       </p>
                     </div>
 
                     <div className="mb-4">
-                      <label className="block text-sm font-medium mb-2 text-white">보증금 금액</label>
+                      <label className="block text-sm font-medium mb-2 text-white">Deposit Amount</label>
                       <div className="flex gap-3">
                         <input
                           className="input-dark"
@@ -284,16 +284,16 @@ export default function CreatePoolPage() {
                 {/* Step 4 - Confirm */}
                 {step === 4 && (
                   <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                    <h2 className="text-xl font-bold text-white mb-6">등록 확인</h2>
+                    <h2 className="text-xl font-bold text-white mb-6">Confirm Registration</h2>
 
                     <div className="space-y-3 mb-8">
                       {[
-                        { label: '거래 유형', value: tradeMode === 'CRYPTO_FIAT' ? 'Crypto → Fiat' : tradeMode === 'FIAT_CRYPTO' ? 'Fiat → Crypto' : 'Crypto ↔ Crypto' },
-                        { label: '제공 자산', value: `${offerAmount || '-'} ${tokens.find(t => t.address === offerToken)?.symbol || ''}` },
-                        { label: '요청 자산', value: tradeMode === 'CRYPTO_CRYPTO' ? `${requestAmount || '-'} ${tokens.find(t => t.address === requestToken)?.symbol || ''}` : `${Number(fiatAmount).toLocaleString()} ${fiatCurrency}` },
-                        { label: '보증금', value: `${depositAmount || '-'} ${tokens.find(t => t.address === offerToken)?.symbol || ''}` },
-                        { label: '만료 기간', value: `${expiryDays}일` },
-                        { label: '등록 지갑', value: address ? address.slice(0, 10) + '...' + address.slice(-8) : '-' },
+                        { label: 'Trade Type', value: tradeMode === 'CRYPTO_FIAT' ? 'Crypto → Fiat' : tradeMode === 'FIAT_CRYPTO' ? 'Fiat → Crypto' : 'Crypto ↔ Crypto' },
+                        { label: 'Offer Asset', value: `${offerAmount || '-'} ${tokens.find(t => t.address === offerToken)?.symbol || ''}` },
+                        { label: 'Request Asset', value: tradeMode === 'CRYPTO_CRYPTO' ? `${requestAmount || '-'} ${tokens.find(t => t.address === requestToken)?.symbol || ''}` : `${Number(fiatAmount).toLocaleString()} ${fiatCurrency}` },
+                        { label: 'Deposit', value: `${depositAmount || '-'} ${tokens.find(t => t.address === offerToken)?.symbol || ''}` },
+                        { label: 'Expiry', value: `${expiryDays} days` },
+                        { label: 'Wallet', value: address ? address.slice(0, 10) + '...' + address.slice(-8) : '-' },
                       ].map(item => (
                         <div key={item.label} className="flex justify-between items-center py-3 px-4 rounded-lg" style={{ background: '#0d0d0d' }}>
                           <span className="text-sm" style={{ color: '#666' }}>{item.label}</span>
@@ -304,7 +304,7 @@ export default function CreatePoolPage() {
 
                     <div className="p-4 rounded-xl mb-6" style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)' }}>
                       <p className="text-sm" style={{ color: '#888' }}>
-                        🔗 등록 시 보증금이 스마트 컨트랙트로 전송됩니다. 가스비가 발생합니다.
+                        🔗 Your deposit will be transferred to the smart contract upon registration. Gas fees apply.
                       </p>
                     </div>
                   </motion.div>
@@ -314,10 +314,10 @@ export default function CreatePoolPage() {
               {/* Navigation */}
               <div className="flex gap-3 mt-8">
                 {step > 1 && (
-                  <button className="btn-secondary flex-1" onClick={handleBack}>← 이전</button>
+                  <button className="btn-secondary flex-1" onClick={handleBack}>← Back</button>
                 )}
                 {step < 4 ? (
-                  <button className="btn-primary flex-1 justify-center" onClick={handleNext}>다음 →</button>
+                  <button className="btn-primary flex-1 justify-center" onClick={handleNext}>Next →</button>
                 ) : (
                   <button
                     className="btn-primary flex-1 justify-center"
@@ -330,9 +330,9 @@ export default function CreatePoolPage() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                         </svg>
-                        트랜잭션 처리 중...
+                        Processing Transaction...
                       </span>
-                    ) : '🚀 Pool 등록하기'}
+                    ) : '🚀 Register Pool'}
                   </button>
                 )}
               </div>

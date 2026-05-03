@@ -7,42 +7,42 @@ const features = [
   {
     icon: '🔒',
     title: 'On-Chain Escrow',
-    desc: '스마트 컨트랙트가 자산을 보호합니다. 거래 완료까지 양측 자산이 안전하게 잠금됩니다.',
-    color: '#f0b429',
-    glow: 'rgba(240,180,41,0.15)',
+    desc: 'Smart contracts protect your assets. Both parties\' funds are securely locked until trade completion.',
+    color: '#00c9a7',
+    glow: 'rgba(0,201,167,0.15)',
   },
   {
     icon: '💱',
     title: 'Cash ↔ Crypto',
-    desc: '오프라인 현금 거래도 온체인 보증금으로 안전하게. 플랫폼 중계자 없이 직접 거래.',
+    desc: 'Offline cash trades secured by on-chain deposits. Trade directly without platform intermediaries.',
     color: '#00ff88',
     glow: 'rgba(0,255,136,0.15)',
   },
   {
     icon: '🌐',
     title: 'Multi-Wallet',
-    desc: 'MetaMask, WalletConnect, Coinbase Wallet, Rabby 등 모든 지갑을 지원합니다.',
+    desc: 'Supports MetaMask, WalletConnect, Coinbase Wallet, Rabby, and all major wallets.',
     color: '#6366f1',
     glow: 'rgba(99,102,241,0.15)',
   },
   {
     icon: '⚡',
     title: 'Auto Settlement',
-    desc: '거래 확인 즉시 자동 정산. 수수료도 스마트 컨트랙트가 자동으로 분배합니다.',
+    desc: 'Instant settlement on confirmation. Fees are automatically distributed by smart contracts.',
     color: '#f472b6',
     glow: 'rgba(244,114,182,0.15)',
   },
   {
     icon: '⚖️',
     title: 'Dispute Resolution',
-    desc: '분쟁 발생 시 멀티시그 중재자가 온체인 증거를 기반으로 48시간 내 판정합니다.',
+    desc: 'Multisig arbitrators resolve disputes within 48 hours based on on-chain evidence.',
     color: '#fb923c',
     glow: 'rgba(251,146,60,0.15)',
   },
   {
     icon: '🛡️',
     title: 'Non-Custodial',
-    desc: '자산은 항상 스마트 컨트랙트 또는 사용자 지갑에만 보관됩니다. 플랫폼은 접근 불가.',
+    desc: 'Assets are always held in smart contracts or user wallets. The platform never has access.',
     color: '#34d399',
     glow: 'rgba(52,211,153,0.15)',
   },
@@ -59,14 +59,14 @@ export default function FeatureCards() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <p className="text-sm font-semibold tracking-widest uppercase mb-3" style={{ color: '#f0b429' }}>
-            Why OTC Platform
+          <p className="text-sm font-semibold tracking-widest uppercase mb-3" style={{ color: '#00c9a7' }}>
+            Why TetherRoll
           </p>
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            거래의 새로운 기준
+            A New Standard for Trading
           </h2>
           <p style={{ color: '#888' }} className="text-lg max-w-2xl mx-auto">
-            온체인 에스크로와 스마트 컨트랙트로 보호되는 완전 탈중앙화 OTC 거래
+            Fully decentralized OTC trading protected by on-chain escrow and smart contracts
           </p>
         </motion.div>
 
@@ -84,7 +84,7 @@ export default function FeatureCards() {
                 tiltMaxAngleY={8}
                 glareEnable={true}
                 glareMaxOpacity={0.06}
-                glareColor="#f0b429"
+                glareColor="#00c9a7"
                 glarePosition="all"
                 glareBorderRadius="16px"
                 scale={1.02}

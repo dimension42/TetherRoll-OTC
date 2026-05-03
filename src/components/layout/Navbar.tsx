@@ -33,12 +33,12 @@ export default function Navbar() {
           <Link href="/" className="flex items-center gap-2 group">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center text-black font-black text-sm"
-              style={{ background: 'linear-gradient(135deg, #f0b429, #c9922a)' }}
+              style={{ background: 'linear-gradient(135deg, #00c9a7, #00a88a)' }}
             >
-              OTC
+              TR
             </div>
             <span className="font-bold text-white text-lg tracking-tight hidden sm:block">
-              OTC<span className="gradient-text">Platform</span>
+              Tether<span className="gradient-text">Roll</span>
             </span>
           </Link>
 
@@ -50,8 +50,8 @@ export default function Navbar() {
                 href={link.href}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                 style={{
-                  color: pathname.startsWith(link.href) ? '#f0b429' : '#888',
-                  background: pathname.startsWith(link.href) ? 'rgba(240,180,41,0.08)' : 'transparent',
+                  color: pathname.startsWith(link.href) ? '#00c9a7' : '#888',
+                  background: pathname.startsWith(link.href) ? 'rgba(0,201,167,0.08)' : 'transparent',
                 }}
               >
                 {link.label}

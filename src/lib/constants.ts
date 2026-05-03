@@ -27,11 +27,11 @@ export const SUPPORTED_TOKENS: Record<number, { symbol: string; address: string;
 };
 
 export const FIAT_CURRENCIES = [
-  { code: 'KRW', name: '한국 원화', symbol: '₩', flag: '🇰🇷' },
+  { code: 'KRW', name: 'Korean Won', symbol: '₩', flag: '🇰🇷' },
   { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' },
-  { code: 'JPY', name: '일본 엔화', symbol: '¥', flag: '🇯🇵' },
+  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', flag: '🇯🇵' },
   { code: 'EUR', name: 'Euro', symbol: '€', flag: '🇪🇺' },
-  { code: 'CNY', name: '중국 위안화', symbol: '¥', flag: '🇨🇳' },
+  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥', flag: '🇨🇳' },
 ];
 
 export const POOL_STATUS = {

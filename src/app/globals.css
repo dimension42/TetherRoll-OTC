@@ -4,8 +4,8 @@
 
 
 :root {
-  --gold: #f0b429;
-  --gold-dim: #c9922a;
+  --accent: #00c9a7;
+  --accent-dim: #00a88a;
   --green: #00ff88;
   --red: #ff4466;
   --bg: #080808;
@@ -38,12 +38,12 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.glow-gold { box-shadow: 0 0 20px rgba(240,180,41,0.15), 0 0 60px rgba(240,180,41,0.05); }
+.glow-gold { box-shadow: 0 0 20px rgba(0,201,167,0.15), 0 0 60px rgba(0,201,167,0.05); }
 .glow-green { box-shadow: 0 0 20px rgba(0,255,136,0.15), 0 0 60px rgba(0,255,136,0.05); }
-.text-glow-gold { text-shadow: 0 0 20px rgba(240,180,41,0.5); }
+.text-glow-gold { text-shadow: 0 0 20px rgba(0,201,167,0.5); }
 
 .gradient-text {
-  background: linear-gradient(135deg, #f0b429 0%, #ffab40 50%, #c9922a 100%);
+  background: linear-gradient(135deg, #00c9a7 0%, #00e6be 50%, #00a88a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -63,7 +63,7 @@ body {
 }
 
 .badge-open { background: rgba(0,255,136,0.1); color: #00ff88; border: 1px solid rgba(0,255,136,0.2); }
-.badge-matched { background: rgba(240,180,41,0.1); color: #f0b429; border: 1px solid rgba(240,180,41,0.2); }
+.badge-matched { background: rgba(0,201,167,0.1); color: #00c9a7; border: 1px solid rgba(0,201,167,0.2); }
 .badge-completed { background: rgba(99,102,241,0.1); color: #a78bfa; border: 1px solid rgba(99,102,241,0.2); }
 .badge-cancelled { background: rgba(255,68,102,0.1); color: #ff4466; border: 1px solid rgba(255,68,102,0.2); }
 .badge-disputed { background: rgba(251,146,60,0.1); color: #fb923c; border: 1px solid rgba(251,146,60,0.2); }
@@ -71,7 +71,7 @@ body {
 .badge-partial { background: rgba(168,85,247,0.1); color: #c084fc; border: 1px solid rgba(168,85,247,0.2); }
 
 [data-rk] {
-  --rk-colors-accentColor: #f0b429 !important;
+  --rk-colors-accentColor: #00c9a7 !important;
   --rk-colors-accentColorForeground: #000 !important;
   --rk-colors-modalBackground: #111111 !important;
   --rk-colors-modalBorder: #2a2a2a !important;
@@ -85,7 +85,7 @@ body {
   border-radius: 8px;
   font-weight: 600;
   color: #000;
-  background: linear-gradient(135deg, #f0b429, #c9922a);
+  background: linear-gradient(135deg, #00c9a7, #00a88a);
   transition: all 0.2s;
   cursor: pointer;
   border: none;
@@ -93,7 +93,7 @@ body {
   align-items: center;
   gap: 8px;
 }
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(240,180,41,0.3); }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,201,167,0.3); }
 .btn-primary:active { transform: scale(0.97); }
 
 .btn-secondary {
@@ -138,10 +138,10 @@ body {
   font-size: 14px;
 }
 .input-dark::placeholder { color: #555; }
-.input-dark:focus { border-color: #f0b429; box-shadow: 0 0 0 2px rgba(240,180,41,0.1); }
+.input-dark:focus { border-color: #00c9a7; box-shadow: 0 0 0 2px rgba(0,201,167,0.1); }
 
 .card-hover { transition: all 0.3s; cursor: pointer; }
-.card-hover:hover { transform: translateY(-2px); border-color: rgba(240,180,41,0.3) !important; box-shadow: 0 8px 32px rgba(240,180,41,0.08); }
+.card-hover:hover { transform: translateY(-2px); border-color: rgba(0,201,167,0.3) !important; box-shadow: 0 8px 32px rgba(0,201,167,0.08); }
 
 @keyframes pulseDot {
   0%,100% { opacity: 1; transform: scale(1); }
@@ -157,8 +157,8 @@ body {
 
 .grid-bg {
   background-image:
-    linear-gradient(rgba(240,180,41,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(240,180,41,0.03) 1px, transparent 1px);
+    linear-gradient(rgba(0,201,167,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,201,167,0.03) 1px, transparent 1px);
   background-size: 60px 60px;
 }
 
@@ -167,7 +167,7 @@ body {
   100% { background-position: 200% 0; }
 }
 .shimmer {
-  background: linear-gradient(90deg, transparent, rgba(240,180,41,0.1), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0,201,167,0.1), transparent);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }

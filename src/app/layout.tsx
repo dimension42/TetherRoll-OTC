@@ -7,11 +7,11 @@ import Navbar from '@/components/layout/Navbar';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'OTC Platform — Crypto × Fiat Trading',
+  title: 'TetherRoll — Crypto × Fiat Trading',
   description: 'Decentralized OTC trading platform. Secure escrow for Crypto ↔ Fiat and Crypto ↔ Crypto trades.',
-  keywords: ['OTC', 'crypto', 'trading', 'escrow', 'defi', 'bitcoin', 'ethereum'],
+  keywords: ['TetherRoll', 'OTC', 'crypto', 'trading', 'escrow', 'defi', 'bitcoin', 'ethereum'],
   openGraph: {
-    title: 'OTC Platform',
+    title: 'TetherRoll',
     description: 'Secure On-Chain OTC Trading',
     type: 'website',
   },
