@@ -2,7 +2,7 @@
 
 import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Sphere, MeshDistortMaterial, Float, Stars, Torus, Ring } from '@react-three/drei';
+import { Sphere, MeshDistortMaterial, Float, Stars, Torus } from '@react-three/drei';
 import * as THREE from 'three';
 
 function GoldSphere() {
@@ -48,14 +48,19 @@ function OrbitRing({ radius, speed, color }: { radius: number; speed: number; co
 
 function FloatingParticles() {
   const count = 80;
-  const positions = useMemo(() => {
-    const arr = new Float32Array(count * 3);
+  const particlesGeo = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      arr[i * 3] = (Math.random() - 0.5) * 12;
-      arr[i * 3 + 1] = (Math.random() - 0.5) * 12;
-      arr[i * 3 + 2] = (Math.random() - 0.5) * 8;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = 3 + Math.random() * 5;
+      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = r * Math.cos(phi);
     }
-    return arr;
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    return geo;
   }, []);
 
   const pointsRef = useRef<THREE.Points>(null);
@@ -66,10 +71,7 @@ function FloatingParticles() {
   });
 
   return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-      </bufferGeometry>
+    <points ref={pointsRef} geometry={particlesGeo}>
       <pointsMaterial color="#00c9a7" size={0.025} transparent opacity={0.6} sizeAttenuation />
     </points>
   );

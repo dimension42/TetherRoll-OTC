@@ -9,7 +9,8 @@ import { ADMIN_ADDRESSES } from '@/lib/constants';
 const navLinks = [
   { href: '/pools', label: 'Pools' },
   { href: '/escrow', label: 'Escrow' },
-  { href: '/profile', label: 'My Page' },
+  { href: '/features', label: 'Features' },
+  { href: '/profile', label: 'Profile' },
 ];
 
 export default function Navbar() {
