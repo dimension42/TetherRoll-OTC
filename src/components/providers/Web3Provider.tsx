@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { config } from '@/lib/wagmi';
 import { PRIVY_APP_ID } from '@/lib/privy';
 import { AuthContext, type AuthState, type AuthUser } from '@/hooks/useAuth';
+import SessionSync from '@/components/auth/SessionSync';
 
 const queryClient = new QueryClient();
 const hasValidPrivyId = PRIVY_APP_ID && PRIVY_APP_ID !== 'PRIVY_APP_ID_HERE';
@@ -67,6 +68,7 @@ function TestAuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={auth}>
+      <SessionSync />
       {children}
       {showModal && (
         <div
@@ -192,7 +194,12 @@ function PrivyAuthSyncInner({ children, mod }: { children: React.ReactNode; mod:
     wallets: wallets || [],
   };
 
-  return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={auth}>
+      <SessionSync />
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export default function Web3Provider({ children }: { children: React.ReactNode }) {

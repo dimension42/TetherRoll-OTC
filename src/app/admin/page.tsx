@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { MOCK_POOLS, MOCK_ESCROWS } from '@/lib/mockData';
@@ -12,7 +12,7 @@ const ADMIN_EMAILS = ['admin@tetherroll.com', 'culture@culturing.org'];
 
 type Lang = 'ko' | 'en';
 
-type AdminTab = 'dashboard' | 'pools' | 'escrows' | 'disputes' | 'settings';
+type AdminTab = 'dashboard' | 'pools' | 'escrows' | 'disputes' | 'accounts' | 'settings';
 
 function shortenAddr(addr: string) { return addr.slice(0, 6) + '...' + addr.slice(-4); }
 
@@ -21,8 +21,148 @@ const TAB_LIST: { key: AdminTab; label: Record<Lang, string>; icon: string }[] =
   { key: 'pools', label: { ko: 'Pool 관리', en: 'Pool Mgmt' }, icon: '🏊' },
   { key: 'escrows', label: { ko: 'Escrow 관리', en: 'Escrow Mgmt' }, icon: '🔒' },
   { key: 'disputes', label: { ko: '분쟁 중재', en: 'Disputes' }, icon: '⚖️' },
+  { key: 'accounts', label: { ko: '계정 관리', en: 'Accounts' }, icon: '👤' },
   { key: 'settings', label: { ko: '수수료 설정', en: 'Fee Settings' }, icon: '⚙️' },
 ];
+
+type AccountRow = {
+  id: string; email: string | null; wallet: string | null;
+  role: string; status: string; label: string | null; created_at?: string;
+};
+
+function AccountsTab({ lang }: { lang: Lang }) {
+  const tt = (ko: string, en: string) => (lang === 'ko' ? ko : en);
+  const [accounts, setAccounts] = useState<AccountRow[]>([]);
+  const [configured, setConfigured] = useState(true);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ email: '', wallet: '', role: 'user', label: '' });
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const r = await fetch('/api/accounts');
+      const d = await r.json();
+      if (!r.ok || !d.ok) { setError(d.message || tt('불러오기 실패', 'Failed to load')); setLoading(false); return; }
+      setConfigured(d.configured !== false);
+      setAccounts(d.accounts || []);
+    } catch {
+      setError(tt('네트워크 오류', 'Network error'));
+    }
+    setLoading(false);
+  }, [lang]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const create = async () => {
+    if (!form.email && !form.wallet) { setError(tt('이메일 또는 지갑이 필요합니다.', 'Email or wallet required')); return; }
+    setBusy(true); setError('');
+    try {
+      const r = await fetch('/api/accounts', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form),
+      });
+      const d = await r.json();
+      if (!r.ok || !d.ok) { setError(d.message || tt('발급 실패', 'Create failed')); }
+      else { setForm({ email: '', wallet: '', role: 'user', label: '' }); await load(); }
+    } catch { setError(tt('네트워크 오류', 'Network error')); }
+    setBusy(false);
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm(tt('이 계정의 접근 권한을 삭제할까요?', 'Remove this account?'))) return;
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/accounts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const d = await r.json();
+      if (!r.ok || !d.ok) setError(d.message || tt('삭제 실패', 'Delete failed'));
+      else await load();
+    } catch { setError(tt('네트워크 오류', 'Network error')); }
+    setBusy(false);
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <h1 className="text-3xl font-black text-white mb-2">{tt('계정 관리', 'Accounts')}</h1>
+      <p className="mb-8" style={{ color: '#666' }}>
+        {tt('로그인 가능한 계정을 발급·관리합니다. 회원가입은 불가하며 여기서 만든 계정만 접근할 수 있습니다.',
+            'Provision accounts that may log in. No self sign-up — only accounts created here can access.')}
+      </p>
+
+      {error && (
+        <div className="mb-4 p-3 rounded-xl text-sm" style={{ background: 'rgba(255,68,102,0.08)', border: '1px solid rgba(255,68,102,0.25)', color: '#ff7088' }}>
+          {error}
+        </div>
+      )}
+      {!configured && (
+        <div className="mb-4 p-3 rounded-xl text-xs" style={{ background: 'rgba(251,146,60,0.08)', border: '1px solid rgba(251,146,60,0.2)', color: '#fb923c' }}>
+          {tt('Supabase 미설정 — NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 를 설정하면 실제 계정 발급이 동작합니다.',
+              'Supabase not configured — set NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY to enable provisioning.')}
+        </div>
+      )}
+
+      {/* 발급 폼 */}
+      <div className="rounded-2xl p-6 mb-6" style={{ background: '#111', border: '1px solid #1f1f1f' }}>
+        <h3 className="font-bold text-white mb-4">{tt('계정 발급', 'Add account')}</h3>
+        <div className="grid md:grid-cols-4 gap-3">
+          <input className="input-dark" placeholder="email@example.com" value={form.email}
+            onChange={e => setForm({ ...form, email: e.target.value })} />
+          <input className="input-dark" placeholder="0x wallet (optional)" value={form.wallet}
+            onChange={e => setForm({ ...form, wallet: e.target.value })} />
+          <select className="input-dark" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
+            <option value="user">user</option>
+            <option value="maker">maker</option>
+            <option value="taker">taker</option>
+            <option value="admin">admin</option>
+          </select>
+          <input className="input-dark" placeholder={tt('메모(선택)', 'label (optional)')} value={form.label}
+            onChange={e => setForm({ ...form, label: e.target.value })} />
+        </div>
+        <button className="btn-primary mt-4 justify-center" onClick={create} disabled={busy}>
+          {busy ? tt('처리 중…', 'Working…') : tt('발급', 'Create')}
+        </button>
+      </div>
+
+      {/* 목록 */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: '#111', border: '1px solid #1f1f1f' }}>
+        {loading ? (
+          <div className="p-8 text-center text-sm" style={{ color: '#666' }}>{tt('불러오는 중…', 'Loading…')}</div>
+        ) : accounts.length === 0 ? (
+          <div className="p-8 text-center text-sm" style={{ color: '#666' }}>{tt('발급된 계정이 없습니다.', 'No accounts yet.')}</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
+                {['Email', 'Wallet', tt('역할', 'Role'), tt('상태', 'Status'), tt('메모', 'Label'), ''].map(h => (
+                  <th key={h} className="px-4 py-3 text-left font-medium" style={{ color: '#555' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y" style={{ borderColor: '#1a1a1a' }}>
+              {accounts.map(a => (
+                <tr key={a.id} className="hover:bg-white/5 transition-colors">
+                  <td className="px-4 py-3 text-white">{a.email || '—'}</td>
+                  <td className="px-4 py-3 font-mono" style={{ color: '#888' }}>{a.wallet ? shortenAddr(a.wallet) : '—'}</td>
+                  <td className="px-4 py-3" style={{ color: a.role === 'admin' ? '#ff4466' : '#00c9a7' }}>{a.role}</td>
+                  <td className="px-4 py-3" style={{ color: a.status === 'active' ? '#00ff88' : '#888' }}>{a.status}</td>
+                  <td className="px-4 py-3" style={{ color: '#888' }}>{a.label || '—'}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button className="text-xs px-3 py-1 rounded-lg"
+                      style={{ background: 'rgba(255,68,102,0.1)', color: '#ff4466', border: '1px solid rgba(255,68,102,0.2)' }}
+                      onClick={() => remove(a.id)} disabled={busy}>
+                      {tt('삭제', 'Remove')}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </motion.div>
+  );
+}
 
 const i18n: Record<Lang, Record<string, string>> = {
   ko: {
@@ -466,6 +606,9 @@ export default function AdminPage() {
               )}
             </motion.div>
           )}
+
+          {/* Accounts tab */}
+          {tab === 'accounts' && <AccountsTab lang={lang} />}
 
           {/* Settings tab */}
           {tab === 'settings' && (
