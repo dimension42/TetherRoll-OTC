@@ -7,7 +7,14 @@ module.exports = {
     version: "0.8.24",
     settings: {
       optimizer: { enabled: true, runs: 200 },
+      viaIR: true, // EscrowVault.createEscrow hits "stack too deep" without IR pipeline
     },
+  },
+  paths: {
+    sources: "./src",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts",
   },
   networks: {
     sepolia: {

@@ -164,10 +164,17 @@ disputes(id, trade_id, raised_by, evidence_ipfs nullable, ruling nullable,
 
 ---
 
-## 10. 구현 단계 (제안)
+## 10. 구현 단계 (진행 현황)
 
-1. Safe Protocol Kit 연동 — 예측주소·배포·모듈 enable 트랜잭션 빌더 (`src/lib/safe/*`).
-2. `ExpiryRefundModule.sol` 작성 + 단위테스트 + 감사.
-3. 입금 인덱서 + Keeper (오프체인 워커).
-4. MPC(Fireblocks) 중재 서명 서비스 + 어드민 분쟁 화면 연동.
-5. 프론트: Mode 1 거래 생성/예치/서명 UX (wagmi + Safe SDK).
+- [ ] 1. Safe Protocol Kit 연동 — 예측주소·배포·모듈 enable 트랜잭션 빌더 (`src/lib/safe/*`).
+- [x] 2. **`ExpiryRefundModule.sol` 작성 + 단위테스트 (완료)** — `contracts/src/ExpiryRefundModule.sol`, 테스트 `contracts/test/ExpiryRefundModule.test.js` 11개 통과. 감사는 A 단계에서.
+- [ ] 3. 입금 인덱서 + Keeper (오프체인 워커).
+- [ ] 4. MPC(Fireblocks) 중재 서명 서비스 + 어드민 분쟁 화면 연동.
+- [ ] 5. 프론트: Mode 1 거래 생성/예치/서명 UX (wagmi + Safe SDK).
+
+### 컨트랙트 워크스페이스 (신규)
+- `contracts/package.json` — Hardhat + toolbox + OpenZeppelin v5.
+- `hardhat.config.js`: `paths.sources = ./src`, `solidity.settings.viaIR = true`
+  (레거시 `EscrowVault.createEscrow`의 "stack too deep" 회피).
+- `PoolRegistry.sol`의 사용되지 않던 `UUPSUpgradeable` import 제거(컴파일 가능화 — 감사 발견 항목).
+- 실행: `cd contracts && npm install && npx hardhat test`.
