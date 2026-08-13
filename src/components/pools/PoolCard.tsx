@@ -5,10 +5,6 @@ import Link from 'next/link';
 import type { Pool } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 
-function shortenAddr(addr: string) {
-  return addr.slice(0, 6) + '...' + addr.slice(-4);
-}
-
 function FilledBar({ pct }: { pct: number }) {
   return (
     <div className="w-full h-1.5 rounded-full mt-2" style={{ background: '#1a1a1a' }}>
@@ -33,6 +29,23 @@ export default function PoolCard({ pool, index }: { pool: Pool; index: number })
   };
   const statusInfo = statusMap[pool.status] || statusMap.OPEN;
 
+  const isFiat = pool.trade_type !== 'CRYPTO_CRYPTO';
+
+  // fiat 풀인 경우 금액 결정
+  const offerAmount = isFiat && pool.trade_type === 'FIAT_CRYPTO' && pool.fiat_currency
+    ? pool.offer_amount.toLocaleString()
+    : pool.offer_amount.toString();
+  const offerSymbol = isFiat && pool.trade_type === 'FIAT_CRYPTO' && pool.fiat_currency
+    ? pool.fiat_currency
+    : pool.offer_symbol;
+
+  const requestAmount = isFiat && pool.trade_type === 'CRYPTO_FIAT' && pool.fiat_currency
+    ? pool.request_amount.toLocaleString()
+    : pool.request_amount.toString();
+  const requestSymbol = isFiat && pool.trade_type === 'CRYPTO_FIAT' && pool.fiat_currency
+    ? pool.fiat_currency
+    : pool.request_symbol;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -50,14 +63,25 @@ export default function PoolCard({ pool, index }: { pool: Pool; index: number })
               <span
                 className="px-2 py-0.5 rounded-full text-xs font-semibold"
                 style={{
-                  background: pool.isFiat ? 'rgba(59,130,246,0.1)' : 'rgba(0,201,167,0.1)',
-                  color: pool.isFiat ? '#60a5fa' : '#00c9a7',
-                  border: pool.isFiat ? '1px solid rgba(59,130,246,0.2)' : '1px solid rgba(0,201,167,0.2)',
+                  background: isFiat ? 'rgba(59,130,246,0.1)' : 'rgba(0,201,167,0.1)',
+                  color: isFiat ? '#60a5fa' : '#00c9a7',
+                  border: isFiat ? '1px solid rgba(59,130,246,0.2)' : '1px solid rgba(0,201,167,0.2)',
                 }}
               >
-                {pool.isFiat ? '💵 FIAT' : '⟠ CRYPTO'}
+                {isFiat ? '💵 FIAT' : '⟠ CRYPTO'}
               </span>
-              <span className="text-xs" style={{ color: '#555' }}>#{pool.poolId}</span>
+              {pool.collateral_mode === 'KRW_SIDE_LOCKS' && pool.collateral_pct && (
+                <span
+                  className="px-2 py-0.5 rounded-full text-xs font-semibold"
+                  style={{
+                    background: 'rgba(0,255,136,0.1)',
+                    color: '#00ff88',
+                    border: '1px solid rgba(0,255,136,0.2)',
+                  }}
+                >
+                  🔒 Collateral {pool.collateral_pct}%
+                </span>
+              )}
             </div>
             <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${statusInfo.cls}`}>
               {statusInfo.label}
@@ -67,8 +91,8 @@ export default function PoolCard({ pool, index }: { pool: Pool; index: number })
           {/* Trade pair */}
           <div className="flex items-center gap-3 mb-4">
             <div className="text-center">
-              <p className="text-2xl font-black text-white">{pool.offerAmount}</p>
-              <p className="text-sm font-semibold" style={{ color: '#00c9a7' }}>{pool.offerSymbol}</p>
+              <p className="text-2xl font-black text-white font-mono">{offerAmount}</p>
+              <p className="text-sm font-semibold" style={{ color: '#00c9a7' }}>{offerSymbol}</p>
               <p className="text-xs mt-0.5" style={{ color: '#555' }}>Offer</p>
             </div>
             <div className="flex-1 flex flex-col items-center">
@@ -79,14 +103,8 @@ export default function PoolCard({ pool, index }: { pool: Pool; index: number })
               </div>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-black text-white">
-                {pool.isFiat
-                  ? Number(pool.fiatAmount).toLocaleString()
-                  : pool.requestAmount}
-              </p>
-              <p className="text-sm font-semibold" style={{ color: '#00ff88' }}>
-                {pool.isFiat ? `${pool.fiatCurrency}` : pool.requestSymbol}
-              </p>
+              <p className="text-2xl font-black text-white font-mono">{requestAmount}</p>
+              <p className="text-sm font-semibold" style={{ color: '#00ff88' }}>{requestSymbol}</p>
               <p className="text-xs mt-0.5" style={{ color: '#555' }}>Request</p>
             </div>
           </div>
@@ -96,22 +114,16 @@ export default function PoolCard({ pool, index }: { pool: Pool; index: number })
             <div className="mb-3">
               <div className="flex justify-between text-xs mb-1">
                 <span style={{ color: '#888' }}>Fill Rate</span>
-                <span style={{ color: '#00c9a7' }}>{(pool.filledPercent / 100).toFixed(0)}%</span>
+                <span style={{ color: '#00c9a7' }}>{pool.filled_pct.toFixed(0)}%</span>
               </div>
-              <FilledBar pct={pool.filledPercent / 100} />
+              <FilledBar pct={pool.filled_pct} />
             </div>
           )}
 
           {/* Footer */}
-          <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: '1px solid #1a1a1a' }}>
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full" style={{ background: 'linear-gradient(135deg, #00c9a7, #6366f1)' }} />
-              <span className="text-xs font-mono" style={{ color: '#666' }}>{shortenAddr(pool.creator)}</span>
-            </div>
+          <div className="flex items-center justify-end mt-3 pt-3" style={{ borderTop: '1px solid #1a1a1a' }}>
             <div className="flex items-center gap-3 text-xs" style={{ color: '#555' }}>
-              <span>Deposit {pool.depositAmount} {pool.offerSymbol}</span>
-              <span>·</span>
-              <span>{formatDistanceToNow(pool.createdAt, { addSuffix: true })}</span>
+              <span>{formatDistanceToNow(new Date(pool.created_at), { addSuffix: true })}</span>
             </div>
           </div>
         </div>

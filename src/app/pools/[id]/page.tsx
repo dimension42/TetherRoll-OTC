@@ -1,38 +1,92 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
-import { MOCK_POOLS } from '@/lib/mockData';
 import { formatDistanceToNow, format } from 'date-fns';
-import SignInPrompt from '@/components/auth/SignInPrompt';
-
-function shortenAddr(addr: string) {
-  return addr.slice(0, 6) + '...' + addr.slice(-4);
-}
+import type { Pool } from '@/lib/types';
 
 export default function PoolDetailPage() {
   const { id } = useParams();
-  const { user, authenticated } = useAuth();
-  const address = user?.wallet?.address;
-  const isConnected = authenticated;
-  const pool = MOCK_POOLS.find(p => p.id === id);
+  const [pool, setPool] = useState<Pool | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!pool) {
+  useEffect(() => {
+    async function loadPool() {
+      if (!id) return;
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch(`/api/pools/${id}`);
+        if (!res.ok) {
+          if (res.status === 404) {
+            setError('Pool not found');
+          } else {
+            throw new Error(`Failed to load pool: ${res.status}`);
+          }
+          return;
+        }
+        const data = await res.json();
+        setPool(data.pool);
+      } catch (e) {
+        console.error(e);
+        setError(e instanceof Error ? e.message : 'Failed to load pool');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPool();
+  }, [id]);
+
+  if (loading) {
     return (
-      <div className="min-h-screen pt-24 flex items-center justify-center">
+      <div className="min-h-screen pt-24 flex items-center justify-center" style={{ background: '#080808' }}>
+        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#00c9a7', borderTopColor: 'transparent' }} />
+      </div>
+    );
+  }
+
+  if (error || !pool) {
+    return (
+      <div className="min-h-screen pt-24 flex items-center justify-center" style={{ background: '#080808' }}>
         <div className="text-center">
           <p className="text-5xl mb-4">🔍</p>
-          <p className="text-2xl font-bold text-white mb-2">Pool not found</p>
+          <p className="text-2xl font-bold text-white mb-2">{error || 'Pool not found'}</p>
           <Link href="/pools" className="btn-secondary mt-4">Back to Pools</Link>
         </div>
       </div>
     );
   }
 
-  const isOwner = address?.toLowerCase() === pool.creator.toLowerCase();
-  const canMatch = !isOwner && (pool.status === 'OPEN' || pool.status === 'PARTIAL');
+  const isFiat = pool.trade_type !== 'CRYPTO_CRYPTO';
+  const statusMap: Record<string, { label: string; cls: string }> = {
+    OPEN: { label: 'OPEN', cls: 'badge-open' },
+    PARTIAL: { label: 'PARTIAL', cls: 'badge-partial' },
+    MATCHED: { label: 'MATCHED', cls: 'badge-matched' },
+    CANCELLED: { label: 'CANCELLED', cls: 'badge-cancelled' },
+    COMPLETED: { label: 'COMPLETED', cls: 'badge-completed' },
+  };
+  const statusInfo = statusMap[pool.status] || statusMap.OPEN;
+
+  // fiat 풀 금액 표기
+  const offerAmount = isFiat && pool.trade_type === 'FIAT_CRYPTO' && pool.fiat_currency
+    ? pool.offer_amount.toLocaleString()
+    : pool.offer_amount.toString();
+  const offerSymbol = isFiat && pool.trade_type === 'FIAT_CRYPTO' && pool.fiat_currency
+    ? pool.fiat_currency
+    : pool.offer_symbol;
+
+  const requestAmount = isFiat && pool.trade_type === 'CRYPTO_FIAT' && pool.fiat_currency
+    ? pool.request_amount.toLocaleString()
+    : pool.request_amount.toString();
+  const requestSymbol = isFiat && pool.trade_type === 'CRYPTO_FIAT' && pool.fiat_currency
+    ? pool.fiat_currency
+    : pool.request_symbol;
+
+  // 환산 비율 계산
+  const rate = (pool.request_amount / pool.offer_amount).toFixed(6);
 
   return (
     <div className="min-h-screen pt-20 pb-16 grid-bg" style={{ background: '#080808' }}>
@@ -41,7 +95,7 @@ export default function PoolDetailPage() {
         <div className="flex items-center gap-2 text-sm mb-8" style={{ color: '#666' }}>
           <Link href="/pools" className="hover:text-white transition-colors">Pools</Link>
           <span>/</span>
-          <span style={{ color: '#00c9a7' }}>Pool #{pool.poolId}</span>
+          <span style={{ color: '#00c9a7' }}>Pool {pool.id.slice(0, 8)}</span>
         </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -52,50 +106,72 @@ export default function PoolDetailPage() {
 
             <div className="p-8">
               {/* Status & type */}
-              <div className="flex items-center gap-3 mb-6">
-                <span className={`px-3 py-1 rounded-full text-sm font-bold badge-${pool.status.toLowerCase()}`}>
-                  ● {pool.status}
+              <div className="flex items-center gap-3 mb-6 flex-wrap">
+                <span className={`px-3 py-1 rounded-full text-sm font-bold ${statusInfo.cls}`}>
+                  ● {statusInfo.label}
                 </span>
                 <span
                   className="px-3 py-1 rounded-full text-xs font-semibold"
                   style={{
-                    background: pool.isFiat ? 'rgba(59,130,246,0.1)' : 'rgba(0,201,167,0.1)',
-                    color: pool.isFiat ? '#60a5fa' : '#00c9a7',
-                    border: pool.isFiat ? '1px solid rgba(59,130,246,0.2)' : '1px solid rgba(0,201,167,0.2)',
+                    background: isFiat ? 'rgba(59,130,246,0.1)' : 'rgba(0,201,167,0.1)',
+                    color: isFiat ? '#60a5fa' : '#00c9a7',
+                    border: isFiat ? '1px solid rgba(59,130,246,0.2)' : '1px solid rgba(0,201,167,0.2)',
                   }}
                 >
-                  {pool.isFiat ? '💵 Cash ↔ Crypto' : '⟠ Crypto ↔ Crypto'}
+                  {isFiat ? '💵 Cash ↔ Crypto' : '⟠ Crypto ↔ Crypto'}
                 </span>
+                {pool.collateral_mode === 'KRW_SIDE_LOCKS' && pool.collateral_pct && (
+                  <span
+                    className="px-3 py-1 rounded-full text-xs font-semibold"
+                    style={{
+                      background: 'rgba(0,255,136,0.1)',
+                      color: '#00ff88',
+                      border: '1px solid rgba(0,255,136,0.2)',
+                    }}
+                  >
+                    🔒 Collateral {pool.collateral_pct}%
+                  </span>
+                )}
               </div>
 
               {/* Trade pair */}
               <div className="flex flex-col md:flex-row items-center gap-6 mb-8">
                 <div className="flex-1 p-6 rounded-xl text-center" style={{ background: 'rgba(0,201,167,0.05)', border: '1px solid rgba(0,201,167,0.1)' }}>
                   <p className="text-xs font-semibold mb-2 uppercase tracking-widest" style={{ color: '#00c9a7' }}>Offer</p>
-                  <p className="text-4xl font-black text-white">{pool.offerAmount}</p>
-                  <p className="text-xl font-bold mt-1" style={{ color: '#00c9a7' }}>{pool.offerSymbol}</p>
+                  <p className="text-4xl font-black text-white font-mono">{offerAmount}</p>
+                  <p className="text-xl font-bold mt-1" style={{ color: '#00c9a7' }}>{offerSymbol}</p>
+                  {pool.offer_chain && (
+                    <p className="text-xs mt-2" style={{ color: '#555' }}>{pool.offer_chain}</p>
+                  )}
                 </div>
 
                 <div className="text-4xl">⇄</div>
 
                 <div className="flex-1 p-6 rounded-xl text-center" style={{ background: 'rgba(0,255,136,0.05)', border: '1px solid rgba(0,255,136,0.1)' }}>
                   <p className="text-xs font-semibold mb-2 uppercase tracking-widest" style={{ color: '#00ff88' }}>Request</p>
-                  <p className="text-4xl font-black text-white">
-                    {pool.isFiat ? Number(pool.fiatAmount).toLocaleString() : pool.requestAmount}
-                  </p>
-                  <p className="text-xl font-bold mt-1" style={{ color: '#00ff88' }}>
-                    {pool.isFiat ? pool.fiatCurrency : pool.requestSymbol}
-                  </p>
+                  <p className="text-4xl font-black text-white font-mono">{requestAmount}</p>
+                  <p className="text-xl font-bold mt-1" style={{ color: '#00ff88' }}>{requestSymbol}</p>
+                  {pool.request_chain && (
+                    <p className="text-xs mt-2" style={{ color: '#555' }}>{pool.request_chain}</p>
+                  )}
                 </div>
               </div>
 
+              {/* Rate */}
+              <div className="mb-6 p-4 rounded-lg text-center" style={{ background: '#0d0d0d' }}>
+                <p className="text-xs mb-1" style={{ color: '#555' }}>Exchange Rate</p>
+                <p className="text-lg font-bold text-white font-mono">
+                  1 {offerSymbol} = {rate} {requestSymbol}
+                </p>
+              </div>
+
               {/* Details grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 {[
-                  { label: 'Deposit', value: `${pool.depositAmount} ${pool.offerSymbol}` },
-                  { label: 'Fill Rate', value: `${(pool.filledPercent / 100).toFixed(0)}%` },
-                  { label: 'Created', value: formatDistanceToNow(pool.createdAt, { addSuffix: true }) },
-                  { label: 'Expires', value: format(pool.expiresAt, 'MM/dd HH:mm') },
+                  { label: 'Fill Rate', value: `${pool.filled_pct.toFixed(0)}%` },
+                  { label: 'Created', value: formatDistanceToNow(new Date(pool.created_at), { addSuffix: true }) },
+                  { label: 'Expires', value: pool.expires_at ? format(new Date(pool.expires_at), 'MM/dd HH:mm') : 'Never' },
+                  { label: 'Chain ID', value: pool.chain_id?.toString() || 'N/A' },
                 ].map(d => (
                   <div key={d.label} className="p-4 rounded-lg" style={{ background: '#0d0d0d' }}>
                     <p className="text-xs mb-1" style={{ color: '#555' }}>{d.label}</p>
@@ -104,40 +180,22 @@ export default function PoolDetailPage() {
                 ))}
               </div>
 
-              {/* Creator */}
-              <div className="flex items-center gap-3 p-4 rounded-lg mb-6" style={{ background: '#0d0d0d' }}>
-                <div className="w-8 h-8 rounded-full" style={{ background: 'linear-gradient(135deg, #00c9a7, #6366f1)' }} />
-                <div>
-                  <p className="text-xs mb-0.5" style={{ color: '#555' }}>Creator</p>
-                  <p className="text-sm font-mono text-white">{pool.creator}</p>
-                </div>
-                {isOwner && (
-                  <span className="ml-auto px-2 py-0.5 rounded text-xs font-bold" style={{ background: 'rgba(0,201,167,0.1)', color: '#00c9a7' }}>My Pool</span>
-                )}
-              </div>
-
-              {/* Action buttons */}
-              {!isConnected ? (
-                <div className="flex justify-center">
-                  <SignInPrompt label="Sign In to Trade" />
-                </div>
-              ) : isOwner ? (
-                <div className="flex gap-3">
-                  <button className="btn-secondary flex-1">Extend Expiry</button>
-                  <button className="btn-danger flex-1">Cancel Pool</button>
-                </div>
-              ) : canMatch ? (
-                <button
-                  className="btn-primary w-full text-base py-4 justify-center"
-                  onClick={() => alert('Create Escrow - Will be enabled after contract integration')}
-                >
-                  Participate in this Pool (Create Escrow)
-                </button>
-              ) : (
-                <div className="text-center p-4 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', color: '#666' }}>
-                  {pool.status === 'COMPLETED' ? 'This pool has been completed' : 'This pool is not available for participation'}
-                </div>
-              )}
+              {/* Action button */}
+              <button
+                disabled
+                className="w-full text-base py-4 rounded-xl font-bold transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  color: '#555',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  cursor: 'not-allowed',
+                }}
+              >
+                Take This Pool
+              </button>
+              <p className="text-xs text-center mt-2" style={{ color: '#555' }}>
+                On-chain settlement arrives with EscrowVault v2 (Phase 3)
+              </p>
             </div>
           </div>
 

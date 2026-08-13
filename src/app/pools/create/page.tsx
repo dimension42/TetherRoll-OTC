@@ -4,42 +4,53 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { SUPPORTED_TOKENS, FIAT_CURRENCIES } from '@/lib/constants';
-import SignInPrompt from '@/components/auth/SignInPrompt';
+import { FIAT_CURRENCIES } from '@/lib/constants';
 import Tilt from 'react-parallax-tilt';
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3;
 type TradeMode = 'CRYPTO_CRYPTO' | 'CRYPTO_FIAT' | 'FIAT_CRYPTO';
 
 const STEPS = [
   { num: 1, label: 'Trade Type' },
   { num: 2, label: 'Assets' },
-  { num: 3, label: 'Deposit' },
-  { num: 4, label: 'Confirm' },
+  { num: 3, label: 'Confirm' },
+];
+
+const CHAINS = [
+  { label: 'Ethereum', value: 'ETHEREUM' },
+  { label: 'Polygon', value: 'POLYGON' },
+  { label: 'BSC', value: 'BSC' },
+  { label: 'Tron', value: 'TRON' },
+];
+
+const EXPIRY_OPTIONS = [
+  { label: '1h', hours: 1 },
+  { label: '6h', hours: 6 },
+  { label: '24h', hours: 24 },
+  { label: '72h', hours: 72 },
 ];
 
 export default function CreatePoolPage() {
-  const { user, authenticated, ready } = useAuth();
-  const address = user?.wallet?.address;
-  const chainId = 11155111;
+  const { user, authenticated, ready, login } = useAuth();
   const router = useRouter();
 
   const [step, setStep] = useState<Step>(1);
-  const [tradeMode, setTradeMode] = useState<TradeMode>('CRYPTO_FIAT');
-  const [offerToken, setOfferToken] = useState('');
+  const [tradeMode, setTradeMode] = useState<TradeMode>('CRYPTO_CRYPTO');
+  const [offerSymbol, setOfferSymbol] = useState('');
+  const [offerChain, setOfferChain] = useState('');
   const [offerAmount, setOfferAmount] = useState('');
-  const [requestToken, setRequestToken] = useState('');
+  const [requestSymbol, setRequestSymbol] = useState('');
+  const [requestChain, setRequestChain] = useState('');
   const [requestAmount, setRequestAmount] = useState('');
   const [fiatCurrency, setFiatCurrency] = useState('KRW');
-  const [fiatAmount, setFiatAmount] = useState('');
-  const [depositAmount, setDepositAmount] = useState('');
-  const [expiryDays, setExpiryDays] = useState('3');
+  const [collateralEnabled, setCollateralEnabled] = useState(false);
+  const [collateralPct, setCollateralPct] = useState(50);
+  const [expiryHours, setExpiryHours] = useState(24);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const tokens = SUPPORTED_TOKENS[chainId || 11155111] || SUPPORTED_TOKENS[11155111];
+  const [error, setError] = useState<string | null>(null);
 
   const handleNext = () => {
-    if (step < 4) setStep((step + 1) as Step);
+    if (step < 3) setStep((step + 1) as Step);
   };
 
   const handleBack = () => {
@@ -47,11 +58,47 @@ export default function CreatePoolPage() {
   };
 
   const handleSubmit = async () => {
+    setError(null);
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 2000));
-    setIsSubmitting(false);
-    alert('Pool registered! (Actual transaction will occur after contract deployment)');
-    router.push('/pools');
+
+    try {
+      // expiresAt 계산
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + expiryHours);
+
+      const body = {
+        tradeType: tradeMode,
+        offerSymbol: tradeMode === 'FIAT_CRYPTO' ? requestSymbol : offerSymbol,
+        offerChain: tradeMode === 'FIAT_CRYPTO' ? requestChain : offerChain,
+        offerAmount: tradeMode === 'FIAT_CRYPTO' ? requestAmount : offerAmount,
+        requestSymbol: tradeMode === 'CRYPTO_FIAT' ? requestSymbol : offerSymbol,
+        requestChain: tradeMode === 'CRYPTO_FIAT' ? requestChain : offerChain,
+        requestAmount: tradeMode === 'CRYPTO_FIAT' ? requestAmount : offerAmount,
+        fiatCurrency: tradeMode !== 'CRYPTO_CRYPTO' ? fiatCurrency : undefined,
+        collateralMode: collateralEnabled ? 'KRW_SIDE_LOCKS' : 'NONE',
+        collateralPct: collateralEnabled ? collateralPct : undefined,
+        expiresAt: expiresAt.toISOString(),
+      };
+
+      const res = await fetch('/api/pools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Failed to create pool: ${res.status}`);
+      }
+
+      const data = await res.json();
+      router.push('/pools');
+    } catch (e) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : 'Failed to create pool');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!ready) {
@@ -68,12 +115,16 @@ export default function CreatePoolPage() {
         <div className="text-center p-12 rounded-3xl" style={{ background: '#111', border: '1px solid #1f1f1f' }}>
           <p className="text-5xl mb-4">🔗</p>
           <h2 className="text-2xl font-bold text-white mb-2">Sign In Required</h2>
-          <p className="mb-6" style={{ color: '#666' }}>Please sign in to register a pool</p>
-          <SignInPrompt />
+          <p className="mb-6" style={{ color: '#666' }}>Please sign in to create a pool</p>
+          <button className="btn-primary" onClick={login}>
+            Sign In
+          </button>
         </div>
       </div>
     );
   }
+
+  const isVip = user?.vipStatus === 'approved';
 
   return (
     <div className="min-h-screen pt-20 pb-16 grid-bg" style={{ background: '#080808' }}>
@@ -81,7 +132,7 @@ export default function CreatePoolPage() {
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-black text-white mb-2">Register Pool</h1>
-          <p style={{ color: '#666' }}>Set your OTC trade terms and deposit collateral</p>
+          <p style={{ color: '#666' }}>Set your OTC trade terms</p>
         </div>
 
         {/* Stepper */}
@@ -116,6 +167,13 @@ export default function CreatePoolPage() {
           ))}
         </div>
 
+        {/* Error display */}
+        {error && (
+          <div className="mb-6 p-4 rounded-xl" style={{ background: 'rgba(255,77,94,0.1)', border: '1px solid rgba(255,77,94,0.2)' }}>
+            <p className="text-sm" style={{ color: '#FF4D5E' }}>⚠️ {error}</p>
+          </div>
+        )}
+
         {/* Form card */}
         <Tilt tiltMaxAngleX={2} tiltMaxAngleY={2} glareEnable glareMaxOpacity={0.03} transitionSpeed={800}>
           <div className="rounded-2xl overflow-hidden" style={{ background: '#111', border: '1px solid #1f1f1f' }}>
@@ -127,35 +185,78 @@ export default function CreatePoolPage() {
                   <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                     <h2 className="text-xl font-bold text-white mb-6">Select Trade Type</h2>
                     <div className="grid gap-4">
-                      {([
-                        { value: 'CRYPTO_FIAT', title: 'Crypto → Fiat', desc: 'Sell crypto and receive cash', icon: '₿→$' },
-                        { value: 'FIAT_CRYPTO', title: 'Fiat → Crypto', desc: 'Pay cash and receive crypto', icon: '$→₿' },
-                        { value: 'CRYPTO_CRYPTO', title: 'Crypto ↔ Crypto', desc: 'Swap one crypto for another', icon: '⟠↔⟠' },
-                      ] as const).map(opt => (
-                        <button
-                          key={opt.value}
-                          onClick={() => setTradeMode(opt.value)}
-                          className="p-4 rounded-xl text-left transition-all duration-200"
-                          style={{
-                            background: tradeMode === opt.value ? 'rgba(0,201,167,0.08)' : 'rgba(255,255,255,0.03)',
-                            border: `1px solid ${tradeMode === opt.value ? 'rgba(0,201,167,0.4)' : 'rgba(255,255,255,0.07)'}`,
-                          }}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div
-                              className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black"
-                              style={{ background: tradeMode === opt.value ? 'rgba(0,201,167,0.2)' : 'rgba(255,255,255,0.05)', color: '#00c9a7' }}
-                            >
-                              {opt.icon}
-                            </div>
-                            <div>
-                              <p className="font-bold text-white">{opt.title}</p>
-                              <p className="text-sm" style={{ color: '#666' }}>{opt.desc}</p>
-                            </div>
-                            {tradeMode === opt.value && <span className="ml-auto text-lg">✓</span>}
+                      <button
+                        onClick={() => setTradeMode('CRYPTO_CRYPTO')}
+                        className="p-4 rounded-xl text-left transition-all duration-200"
+                        style={{
+                          background: tradeMode === 'CRYPTO_CRYPTO' ? 'rgba(0,201,167,0.08)' : 'rgba(255,255,255,0.03)',
+                          border: `1px solid ${tradeMode === 'CRYPTO_CRYPTO' ? 'rgba(0,201,167,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                        }}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div
+                            className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black"
+                            style={{ background: tradeMode === 'CRYPTO_CRYPTO' ? 'rgba(0,201,167,0.2)' : 'rgba(255,255,255,0.05)', color: '#00c9a7' }}
+                          >
+                            ⟠↔⟠
                           </div>
-                        </button>
-                      ))}
+                          <div>
+                            <p className="font-bold text-white">Crypto ↔ Crypto</p>
+                            <p className="text-sm" style={{ color: '#666' }}>Swap one crypto for another</p>
+                          </div>
+                          {tradeMode === 'CRYPTO_CRYPTO' && <span className="ml-auto text-lg">✓</span>}
+                        </div>
+                      </button>
+
+                      {isVip && (
+                        <>
+                          <button
+                            onClick={() => setTradeMode('CRYPTO_FIAT')}
+                            className="p-4 rounded-xl text-left transition-all duration-200"
+                            style={{
+                              background: tradeMode === 'CRYPTO_FIAT' ? 'rgba(0,201,167,0.08)' : 'rgba(255,255,255,0.03)',
+                              border: `1px solid ${tradeMode === 'CRYPTO_FIAT' ? 'rgba(0,201,167,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                            }}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div
+                                className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black"
+                                style={{ background: tradeMode === 'CRYPTO_FIAT' ? 'rgba(0,201,167,0.2)' : 'rgba(255,255,255,0.05)', color: '#00c9a7' }}
+                              >
+                                ₿→$
+                              </div>
+                              <div>
+                                <p className="font-bold text-white">Crypto → Fiat</p>
+                                <p className="text-sm" style={{ color: '#666' }}>Sell crypto and receive cash</p>
+                              </div>
+                              {tradeMode === 'CRYPTO_FIAT' && <span className="ml-auto text-lg">✓</span>}
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => setTradeMode('FIAT_CRYPTO')}
+                            className="p-4 rounded-xl text-left transition-all duration-200"
+                            style={{
+                              background: tradeMode === 'FIAT_CRYPTO' ? 'rgba(0,201,167,0.08)' : 'rgba(255,255,255,0.03)',
+                              border: `1px solid ${tradeMode === 'FIAT_CRYPTO' ? 'rgba(0,201,167,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                            }}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div
+                                className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black"
+                                style={{ background: tradeMode === 'FIAT_CRYPTO' ? 'rgba(0,201,167,0.2)' : 'rgba(255,255,255,0.05)', color: '#00c9a7' }}
+                              >
+                                $→₿
+                              </div>
+                              <div>
+                                <p className="font-bold text-white">Fiat → Crypto</p>
+                                <p className="text-sm" style={{ color: '#666' }}>Pay cash and receive crypto</p>
+                              </div>
+                              {tradeMode === 'FIAT_CRYPTO' && <span className="ml-auto text-lg">✓</span>}
+                            </div>
+                          </button>
+                        </>
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -171,19 +272,42 @@ export default function CreatePoolPage() {
                         Offer Asset
                       </label>
                       {tradeMode !== 'FIAT_CRYPTO' ? (
-                        <div className="flex gap-3">
-                          <select className="input-dark w-32 shrink-0" value={offerToken} onChange={e => setOfferToken(e.target.value)}>
-                            <option value="">Select token</option>
-                            {tokens.map(t => <option key={t.address} value={t.address}>{t.icon} {t.symbol}</option>)}
+                        <div className="grid gap-3">
+                          <input
+                            className="input-dark"
+                            placeholder="Symbol (e.g., USDT)"
+                            value={offerSymbol}
+                            onChange={e => setOfferSymbol(e.target.value.toUpperCase())}
+                            maxLength={10}
+                          />
+                          <select className="input-dark" value={offerChain} onChange={e => setOfferChain(e.target.value)}>
+                            <option value="">Select chain</option>
+                            {CHAINS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                           </select>
-                          <input className="input-dark" placeholder="Enter amount" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} type="number" min="0" />
+                          <input
+                            className="input-dark"
+                            placeholder="Enter amount"
+                            value={offerAmount}
+                            onChange={e => setOfferAmount(e.target.value)}
+                            type="number"
+                            min="0"
+                            step="any"
+                          />
                         </div>
                       ) : (
-                        <div className="flex gap-3">
-                          <select className="input-dark w-32 shrink-0" value={fiatCurrency} onChange={e => setFiatCurrency(e.target.value)}>
+                        <div className="grid gap-3">
+                          <select className="input-dark" value={fiatCurrency} onChange={e => setFiatCurrency(e.target.value)}>
                             {FIAT_CURRENCIES.map(f => <option key={f.code} value={f.code}>{f.flag} {f.code}</option>)}
                           </select>
-                          <input className="input-dark" placeholder="Enter amount" value={fiatAmount} onChange={e => setFiatAmount(e.target.value)} type="number" min="0" />
+                          <input
+                            className="input-dark"
+                            placeholder="Enter amount"
+                            value={offerAmount}
+                            onChange={e => setOfferAmount(e.target.value)}
+                            type="number"
+                            min="0"
+                            step="any"
+                          />
                         </div>
                       )}
                     </div>
@@ -194,39 +318,94 @@ export default function CreatePoolPage() {
                         Request Asset
                       </label>
                       {tradeMode !== 'CRYPTO_FIAT' ? (
-                        <div className="flex gap-3">
-                          <select className="input-dark w-32 shrink-0" value={requestToken} onChange={e => setRequestToken(e.target.value)}>
-                            <option value="">Select token</option>
-                            {tokens.map(t => <option key={t.address} value={t.address}>{t.icon} {t.symbol}</option>)}
+                        <div className="grid gap-3">
+                          <input
+                            className="input-dark"
+                            placeholder="Symbol (e.g., USDC)"
+                            value={requestSymbol}
+                            onChange={e => setRequestSymbol(e.target.value.toUpperCase())}
+                            maxLength={10}
+                          />
+                          <select className="input-dark" value={requestChain} onChange={e => setRequestChain(e.target.value)}>
+                            <option value="">Select chain</option>
+                            {CHAINS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                           </select>
-                          <input className="input-dark" placeholder="Enter amount" value={requestAmount} onChange={e => setRequestAmount(e.target.value)} type="number" min="0" />
+                          <input
+                            className="input-dark"
+                            placeholder="Enter amount"
+                            value={requestAmount}
+                            onChange={e => setRequestAmount(e.target.value)}
+                            type="number"
+                            min="0"
+                            step="any"
+                          />
                         </div>
                       ) : (
-                        <div className="flex gap-3">
-                          <select className="input-dark w-32 shrink-0" value={fiatCurrency} onChange={e => setFiatCurrency(e.target.value)}>
+                        <div className="grid gap-3">
+                          <select className="input-dark" value={fiatCurrency} onChange={e => setFiatCurrency(e.target.value)}>
                             {FIAT_CURRENCIES.map(f => <option key={f.code} value={f.code}>{f.flag} {f.code}</option>)}
                           </select>
-                          <input className="input-dark" placeholder="Enter amount" value={fiatAmount} onChange={e => setFiatAmount(e.target.value)} type="number" min="0" />
+                          <input
+                            className="input-dark"
+                            placeholder="Enter amount"
+                            value={requestAmount}
+                            onChange={e => setRequestAmount(e.target.value)}
+                            type="number"
+                            min="0"
+                            step="any"
+                          />
                         </div>
                       )}
                     </div>
+
+                    {/* Collateral (fiat only) */}
+                    {tradeMode !== 'CRYPTO_CRYPTO' && (
+                      <div className="mb-6">
+                        <label className="flex items-center gap-2 mb-3">
+                          <input
+                            type="checkbox"
+                            checked={collateralEnabled}
+                            onChange={e => setCollateralEnabled(e.target.checked)}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm font-medium text-white">Enable On-Chain Collateral</span>
+                        </label>
+                        {collateralEnabled && (
+                          <div>
+                            <div className="flex justify-between mb-2">
+                              <span className="text-sm" style={{ color: '#888' }}>Collateral Percentage</span>
+                              <span className="text-sm font-bold" style={{ color: '#00c9a7' }}>{collateralPct}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="10"
+                              max="100"
+                              step="5"
+                              value={collateralPct}
+                              onChange={e => setCollateralPct(Number(e.target.value))}
+                              className="w-full"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Expiry */}
                     <div>
                       <label className="block text-sm font-medium mb-2" style={{ color: '#888' }}>Expiry Period</label>
                       <div className="flex gap-2">
-                        {['1', '3', '7', '14', '30'].map(d => (
+                        {EXPIRY_OPTIONS.map(opt => (
                           <button
-                            key={d}
-                            onClick={() => setExpiryDays(d)}
+                            key={opt.hours}
+                            onClick={() => setExpiryHours(opt.hours)}
                             className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
                             style={{
-                              background: expiryDays === d ? 'rgba(0,201,167,0.15)' : 'rgba(255,255,255,0.04)',
-                              color: expiryDays === d ? '#00c9a7' : '#666',
-                              border: `1px solid ${expiryDays === d ? 'rgba(0,201,167,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                              background: expiryHours === opt.hours ? 'rgba(0,201,167,0.15)' : 'rgba(255,255,255,0.04)',
+                              color: expiryHours === opt.hours ? '#00c9a7' : '#666',
+                              border: `1px solid ${expiryHours === opt.hours ? 'rgba(0,201,167,0.3)' : 'rgba(255,255,255,0.07)'}`,
                             }}
                           >
-                            {d}d
+                            {opt.label}
                           </button>
                         ))}
                       </div>
@@ -234,76 +413,18 @@ export default function CreatePoolPage() {
                   </motion.div>
                 )}
 
-                {/* Step 3 - Deposit */}
+                {/* Step 3 - Confirm */}
                 {step === 3 && (
                   <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                    <h2 className="text-xl font-bold text-white mb-2">Deposit Setup</h2>
-                    <p className="text-sm mb-6" style={{ color: '#666' }}>
-                      The deposit is locked in escrow to guarantee trade fulfillment. Fully refunded upon completion.
-                    </p>
-
-                    <div
-                      className="p-4 rounded-xl mb-6"
-                      style={{ background: 'rgba(0,201,167,0.05)', border: '1px solid rgba(0,201,167,0.15)' }}
-                    >
-                      <p className="text-sm font-semibold mb-1" style={{ color: '#00c9a7' }}>⚠️ Deposit Purpose</p>
-                      <p className="text-sm" style={{ color: '#888' }}>
-                        If the counterparty fails to show up or breaches the trade, the deposit is paid to you as a penalty.
-                      </p>
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium mb-2 text-white">Deposit Amount</label>
-                      <div className="flex gap-3">
-                        <input
-                          className="input-dark"
-                          placeholder="0.0"
-                          value={depositAmount}
-                          onChange={e => setDepositAmount(e.target.value)}
-                          type="number"
-                          min="0"
-                        />
-                        <div className="px-4 py-3 rounded-lg shrink-0 text-sm font-medium" style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', color: '#888' }}>
-                          {tradeMode !== 'FIAT_CRYPTO' ? tokens.find(t => t.address === offerToken)?.symbol || 'ETH' : fiatCurrency}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3">
-                      {['5', '10', '20'].map(pct => (
-                        <button
-                          key={pct}
-                          className="py-2 rounded-lg text-sm font-medium transition-all"
-                          style={{
-                            background: 'rgba(255,255,255,0.04)',
-                            color: '#888',
-                            border: '1px solid rgba(255,255,255,0.07)',
-                          }}
-                          onClick={() => {
-                            const base = Number(offerAmount) || 1;
-                            setDepositAmount((base * Number(pct) / 100).toFixed(4));
-                          }}
-                        >
-                          {pct}%
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Step 4 - Confirm */}
-                {step === 4 && (
-                  <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                     <h2 className="text-xl font-bold text-white mb-6">Confirm Registration</h2>
 
                     <div className="space-y-3 mb-8">
                       {[
                         { label: 'Trade Type', value: tradeMode === 'CRYPTO_FIAT' ? 'Crypto → Fiat' : tradeMode === 'FIAT_CRYPTO' ? 'Fiat → Crypto' : 'Crypto ↔ Crypto' },
-                        { label: 'Offer Asset', value: `${offerAmount || '-'} ${tokens.find(t => t.address === offerToken)?.symbol || ''}` },
-                        { label: 'Request Asset', value: tradeMode === 'CRYPTO_CRYPTO' ? `${requestAmount || '-'} ${tokens.find(t => t.address === requestToken)?.symbol || ''}` : `${Number(fiatAmount).toLocaleString()} ${fiatCurrency}` },
-                        { label: 'Deposit', value: `${depositAmount || '-'} ${tokens.find(t => t.address === offerToken)?.symbol || ''}` },
-                        { label: 'Expiry', value: `${expiryDays} days` },
-                        { label: 'Wallet', value: address ? address.slice(0, 10) + '...' + address.slice(-8) : '-' },
+                        { label: 'Offer', value: tradeMode === 'FIAT_CRYPTO' ? `${offerAmount || '-'} ${fiatCurrency}` : `${offerAmount || '-'} ${offerSymbol}` },
+                        { label: 'Request', value: tradeMode === 'CRYPTO_FIAT' ? `${requestAmount || '-'} ${fiatCurrency}` : `${requestAmount || '-'} ${requestSymbol}` },
+                        { label: 'Collateral', value: collateralEnabled ? `${collateralPct}%` : 'None' },
+                        { label: 'Expiry', value: `${expiryHours}h` },
                       ].map(item => (
                         <div key={item.label} className="flex justify-between items-center py-3 px-4 rounded-lg" style={{ background: '#0d0d0d' }}>
                           <span className="text-sm" style={{ color: '#666' }}>{item.label}</span>
@@ -314,7 +435,7 @@ export default function CreatePoolPage() {
 
                     <div className="p-4 rounded-xl mb-6" style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)' }}>
                       <p className="text-sm" style={{ color: '#888' }}>
-                        🔗 Your deposit will be transferred to the smart contract upon registration. Gas fees apply.
+                        🔗 Your pool will be created on-chain in Phase 3 (EscrowVault deployment).
                       </p>
                     </div>
                   </motion.div>
@@ -326,7 +447,7 @@ export default function CreatePoolPage() {
                 {step > 1 && (
                   <button className="btn-secondary flex-1" onClick={handleBack}>← Back</button>
                 )}
-                {step < 4 ? (
+                {step < 3 ? (
                   <button className="btn-primary flex-1 justify-center" onClick={handleNext}>Next →</button>
                 ) : (
                   <button
@@ -340,7 +461,7 @@ export default function CreatePoolPage() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                         </svg>
-                        Processing Transaction...
+                        Processing...
                       </span>
                     ) : '🚀 Register Pool'}
                   </button>

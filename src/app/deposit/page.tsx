@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useAccount } from 'wagmi';
 import { useAuth } from '@/hooks/useAuth';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion } from 'framer-motion';
@@ -13,14 +14,14 @@ function shortenAddr(addr: string) {
 }
 
 export default function DepositPage() {
-  const { user, authenticated, login, ready, wallets } = useAuth();
+  const { user, authenticated, login, ready } = useAuth();
+  const { address: connectedAddress } = useAccount();
   const [selectedToken, setSelectedToken] = useState<typeof DEPOSIT_TOKENS[number]>(DEPOSIT_TOKENS[0]);
   const [selectedChain, setSelectedChain] = useState<SelectedChain>(DEPOSIT_TOKENS[0].chains[0]);
   const [copied, setCopied] = useState(false);
 
-  const embeddedWallet = wallets.find(w => w.walletClientType === 'privy');
-  const externalWallet = wallets.find(w => w.walletClientType !== 'privy');
-  const depositAddress = embeddedWallet?.address || externalWallet?.address || user?.wallet?.address;
+  // 세션에 연결된 지갑 우선, 없으면 현재 연결된 외부 지갑
+  const depositAddress = user?.walletAddress || connectedAddress;
 
   const handleCopy = useCallback(() => {
     if (depositAddress) {
@@ -139,17 +140,19 @@ export default function DepositPage() {
                 <div className="mt-3 flex items-center gap-2">
                   <span
                     className="w-2 h-2 rounded-full"
-                    style={{ background: embeddedWallet ? '#00c9a7' : '#6366f1' }}
+                    style={{ background: user?.walletAddress ? '#00c9a7' : '#6366f1' }}
                   />
                   <span className="text-xs" style={{ color: '#666' }}>
-                    {embeddedWallet ? 'Platform Wallet (Auto-generated)' : 'External Wallet'}
+                    {user?.walletAddress ? 'Linked Wallet' : 'Connected Wallet'}
                   </span>
                 </div>
               </div>
             ) : (
               <div className="text-center py-12">
-                <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{ borderColor: '#00c9a7', borderTopColor: 'transparent' }} />
-                <p className="text-sm" style={{ color: '#666' }}>Generating your wallet...</p>
+                <p className="text-sm mb-2 text-white font-semibold">No wallet linked</p>
+                <p className="text-sm" style={{ color: '#666' }}>
+                  Sign in with a wallet (or connect one) to get your deposit address.
+                </p>
               </div>
             )}
           </motion.div>

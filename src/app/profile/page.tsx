@@ -2,13 +2,10 @@
 
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { MOCK_POOLS, MOCK_ESCROWS } from '@/lib/mockData';
-import PoolCard from '@/components/pools/PoolCard';
 import SignInPrompt from '@/components/auth/SignInPrompt';
 
 export default function ProfilePage() {
   const { user, authenticated, ready } = useAuth();
-  const address = user?.wallet?.address;
 
   if (!ready) {
     return (
@@ -18,7 +15,7 @@ export default function ProfilePage() {
     );
   }
 
-  if (!authenticated) {
+  if (!authenticated || !user) {
     return (
       <div className="min-h-screen pt-20 flex items-center justify-center" style={{ background: '#080808' }}>
         <div className="text-center p-12 rounded-3xl" style={{ background: '#111', border: '1px solid #1f1f1f' }}>
@@ -31,93 +28,104 @@ export default function ProfilePage() {
     );
   }
 
-  const myPools = MOCK_POOLS.filter(p => p.creator.toLowerCase() === address?.toLowerCase());
-  const myEscrows = MOCK_ESCROWS.filter(e =>
-    e.partyA.toLowerCase() === address?.toLowerCase() ||
-    e.partyB.toLowerCase() === address?.toLowerCase()
-  );
+  const initials = user.displayName
+    ? user.displayName
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : user.email?.slice(0, 2).toUpperCase() || 'U';
 
-  const completedTrades = myEscrows.filter(e => e.status === 'COMPLETED').length;
-  const activeTrades = myEscrows.filter(e => e.status === 'ACTIVE' || e.status === 'PENDING').length;
+  // VIP 상태 배지 (none이면 렌더 안 함)
+  const vipBadge = user.vipStatus !== 'none' && (
+    <span
+      className="px-3 py-1 rounded-full text-xs font-bold"
+      style={{
+        background:
+          user.vipStatus === 'approved'
+            ? 'rgba(0,201,167,0.15)'
+            : user.vipStatus === 'pending'
+            ? 'rgba(245,166,35,0.15)'
+            : 'rgba(136,136,136,0.15)',
+        color:
+          user.vipStatus === 'approved'
+            ? '#00c9a7'
+            : user.vipStatus === 'pending'
+            ? '#f5a623'
+            : '#888',
+        border:
+          user.vipStatus === 'approved'
+            ? '1px solid rgba(0,201,167,0.3)'
+            : user.vipStatus === 'pending'
+            ? '1px solid rgba(245,166,35,0.3)'
+            : '1px solid rgba(136,136,136,0.3)',
+      }}
+    >
+      {user.vipStatus === 'approved' ? 'VIP' : user.vipStatus === 'pending' ? 'VIP review' : 'VIP revoked'}
+    </span>
+  );
 
   return (
     <div className="min-h-screen pt-20 pb-16" style={{ background: '#080808' }}>
       <div className="max-w-5xl mx-auto px-4 py-8">
-        {/* Profile header */}
+        {/* 프로필 헤더 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="p-6 rounded-2xl mb-8 flex flex-col md:flex-row md:items-center gap-6"
           style={{ background: '#111', border: '1px solid #1f1f1f' }}
         >
+          {/* 아바타 */}
           <div
-            className="w-20 h-20 rounded-2xl shrink-0"
+            className="w-20 h-20 rounded-2xl shrink-0 flex items-center justify-center text-2xl font-black text-white"
             style={{ background: 'linear-gradient(135deg, #00c9a7, #6366f1, #00ff88)' }}
-          />
+          >
+            {initials}
+          </div>
+
           <div className="flex-1">
-            <h1 className="text-2xl font-black text-white mb-1">My Profile</h1>
-            <p className="font-mono text-sm mb-3" style={{ color: '#888' }}>{address}</p>
-            <div className="flex flex-wrap gap-4">
-              {[
-                { label: 'Total Pools', value: MOCK_POOLS.length },
-                { label: 'Active Trades', value: activeTrades },
-                { label: 'Completed', value: completedTrades },
-                { label: 'Success Rate', value: completedTrades ? '100%' : '-' },
-              ].map(s => (
-                <div key={s.label}>
-                  <p className="text-xl font-bold text-white">{s.value}</p>
-                  <p className="text-xs" style={{ color: '#555' }}>{s.label}</p>
-                </div>
-              ))}
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-2xl font-black text-white">{user.displayName || 'User'}</h1>
+              {vipBadge}
+            </div>
+
+            <p className="text-sm mb-1" style={{ color: '#888' }}>
+              {user.email}
+            </p>
+
+            {user.walletAddress && (
+              <p className="font-mono text-sm mb-3" style={{ color: '#888' }}>
+                {user.walletAddress.slice(0, 6)}...{user.walletAddress.slice(-4)}
+              </p>
+            )}
+
+            {/* 로그인 수단 표시 */}
+            <div className="flex flex-wrap gap-2">
+              {user.email && (
+                <span className="px-2 py-1 rounded text-xs font-medium" style={{ background: '#1f1f1f', color: '#888' }}>
+                  Email
+                </span>
+              )}
+              {user.walletAddress && (
+                <span className="px-2 py-1 rounded text-xs font-medium" style={{ background: '#1f1f1f', color: '#888' }}>
+                  Wallet
+                </span>
+              )}
             </div>
           </div>
         </motion.div>
 
-        {/* My Pools */}
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-white mb-4">My Pools</h2>
-          {myPools.length === 0 ? (
-            <div className="text-center py-12 rounded-2xl" style={{ background: '#111', border: '1px solid #1f1f1f' }}>
-              <p className="text-3xl mb-3">🏊</p>
-              <p className="text-white font-semibold mb-2">No pools registered yet</p>
-              <a href="/pools/create" className="btn-primary inline-flex mt-2">Register Pool</a>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {myPools.map((pool, i) => <PoolCard key={pool.id} pool={pool} index={i} />)}
-            </div>
-          )}
-        </div>
-
-        {/* My Escrows */}
+        {/* Trade History 섹션 */}
         <div>
-          <h2 className="text-xl font-bold text-white mb-4">My Escrow History</h2>
-          {myEscrows.length === 0 ? (
-            <div className="text-center py-12 rounded-2xl" style={{ background: '#111', border: '1px solid #1f1f1f' }}>
-              <p className="text-3xl mb-3">🔒</p>
-              <p className="text-white font-semibold">No escrow history</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {myEscrows.map(e => (
-                <div
-                  key={e.id}
-                  className="p-4 rounded-xl flex items-center justify-between"
-                  style={{ background: '#111', border: '1px solid #1f1f1f' }}
-                >
-                  <div>
-                    <p className="font-semibold text-white text-sm">Escrow #{e.escrowId} — Pool #{e.poolId}</p>
-                    <p className="text-xs mt-0.5" style={{ color: '#666' }}>
-                      {e.assetAAmount} {e.assetASymbol} ↔ {e.isFiat ? `${Number(e.assetBAmount).toLocaleString()} ${e.fiatCurrency}` : `${e.assetBAmount} ${e.assetBSymbol}`}
-                    </p>
-                  </div>
-                  <span className={`badge-${e.status.toLowerCase()} px-2 py-0.5 rounded-full text-xs font-bold`}>
-                    {e.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          <h2 className="text-xl font-bold text-white mb-4">Trade History</h2>
+          <div className="text-center py-12 rounded-2xl" style={{ background: '#111', border: '1px solid #1f1f1f' }}>
+            <p className="text-3xl mb-3">📊</p>
+            <p className="text-white font-semibold mb-1">Your trades will appear here</p>
+            <p className="text-sm" style={{ color: '#666' }}>
+              On-chain settlement lands in Phase 3.
+            </p>
+          </div>
         </div>
       </div>
     </div>
