@@ -5,7 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import type { AdminRole } from '@/lib/auth/adminRoles';
 
 import DashboardTab from './tabs/DashboardTab';
-import PendingTab from './tabs/PendingTab';
+import RollsTab from './RollsTab';
+import RefundsTab from './RefundsTab';
 import PoolsTab from './tabs/PoolsTab';
 import TradesTab from './tabs/TradesTab';
 import DisputesTab from './tabs/DisputesTab';
@@ -40,14 +41,14 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { key: 'dashboard', label: 'Dashboard', icon: '📊', minRole: 'viewer', Component: DashboardTab },
-  { key: 'rolls', label: 'Rolls', icon: '🎲', minRole: 'viewer', Component: () => <PendingTab name="Rolls" /> },
+  { key: 'rolls', label: 'Rolls', icon: '🎲', minRole: 'ops', Component: RollsTab },
   { key: 'pools', label: 'Pools', icon: '💧', minRole: 'viewer', Component: PoolsTab },
   { key: 'trades', label: 'Trades', icon: '🔄', minRole: 'viewer', Component: TradesTab },
   { key: 'disputes', label: 'Disputes', icon: '⚖️', minRole: 'viewer', Component: DisputesTab },
   { key: 'vip', label: 'VIP', icon: '👑', minRole: 'ops', Component: VipTab },
   { key: 'treasury', label: 'Treasury', icon: '🏦', minRole: 'admin', Component: TreasuryTab },
   { key: 'fees', label: 'Fees', icon: '💰', minRole: 'admin', Component: FeesTab },
-  { key: 'refunds', label: 'Refunds', icon: '↩️', minRole: 'ops', Component: () => <PendingTab name="Refunds" /> },
+  { key: 'refunds', label: 'Refunds', icon: '↩️', minRole: 'ops', Component: RefundsTab },
   { key: 'users', label: 'Users', icon: '👥', minRole: 'viewer', Component: UsersTab },
   { key: 'logs', label: 'Logs', icon: '📋', minRole: 'viewer', Component: LogsTab },
   { key: 'settings', label: 'Settings', icon: '⚙️', minRole: 'ops', Component: SettingsTab },
