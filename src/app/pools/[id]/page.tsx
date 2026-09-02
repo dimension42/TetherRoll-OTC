@@ -9,6 +9,7 @@ import { usePool } from '@/hooks/useEscrowVault';
 import { PoolActions } from '@/components/pools/PoolActions';
 import { TakePanel } from '@/components/pools/TakePanel';
 import { RequestFiatTrade } from '@/components/pools/RequestFiatTrade';
+import { RequestDeskTrade } from '@/components/custody/RequestDeskTrade';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { Countdown } from '@/components/ui/Countdown';
 import { AddressLink, TxLink } from '@/components/ui/AddressLink';
@@ -96,7 +97,8 @@ export default function PoolDetailPage() {
     );
   }
 
-  const chainMeta = CHAIN_META[pool.chain_id];
+  const isDesk = pool.kind === 'DESK';
+  const chainMeta = !isDesk && pool.chain_id ? CHAIN_META[pool.chain_id] : null;
   const isFiat = pool.kind === 'FIAT';
 
   // FIAT 금액 포맷
@@ -139,7 +141,20 @@ export default function PoolDetailPage() {
               {/* Header */}
               <div className="flex flex-wrap items-center gap-3 mb-6">
                 <StatusChip status={effectiveStatus || pool.status} type="pool" />
-                {chainMeta && (
+                {isDesk && (
+                  <span
+                    className="px-3 py-1 rounded-lg text-sm font-bold"
+                    style={{
+                      background: 'rgba(245,166,35,0.1)',
+                      color: '#f5a623',
+                      border: '1px solid rgba(245,166,35,0.3)',
+                    }}
+                    title="플랫폼 지갑이 보관하는 거래입니다 (컨트랙트 에스크로 아님)"
+                  >
+                    🏦 Platform Custody
+                  </span>
+                )}
+                {!isDesk && chainMeta && (
                   <span
                     className="px-3 py-1 rounded-lg text-sm font-bold"
                     style={{
@@ -151,7 +166,7 @@ export default function PoolDetailPage() {
                     {chainMeta.name}
                   </span>
                 )}
-                {isFiat && (
+                {isFiat && !isDesk && (
                   <span
                     className="px-3 py-1 rounded-lg text-xs font-semibold"
                     style={{
@@ -245,10 +260,12 @@ export default function PoolDetailPage() {
           {/* Actions & Take Panel */}
           <div className="grid md:grid-cols-2 gap-6 mb-6">
             {/* Maker actions */}
-            <PoolActions pool={pool} onSuccess={loadPool} />
+            {!isDesk && <PoolActions pool={pool} onSuccess={loadPool} />}
 
             {/* Take / Request panel */}
-            {isFiat ? (
+            {isDesk ? (
+              <RequestDeskTrade pool={pool as unknown as import('@/components/custody/types').DeskPool} />
+            ) : isFiat ? (
               <RequestFiatTrade pool={pool} />
             ) : (
               <TakePanel pool={{ ...pool, status: effectiveStatus || pool.status, offer_remaining_wei: effectiveRemaining || pool.offer_remaining_wei }} onSuccess={loadPool} />

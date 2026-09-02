@@ -13,6 +13,7 @@ import { TradeTimeline } from '@/components/trades/TradeTimeline';
 import { TradeHeader } from '@/components/trades/TradeHeader';
 import { BankInfoCard } from '@/components/trades/BankInfoCard';
 import { TradeActions } from '@/components/trades/TradeActions';
+import { DeskTradeView } from '@/components/custody/DeskTradeView';
 import { CHAIN_META } from '@/lib/chains';
 
 export default function TradeDetailPage() {
@@ -24,6 +25,7 @@ export default function TradeDetailPage() {
   const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deskTrade, setDeskTrade] = useState<import('@/components/custody/types').DeskTrade | null>(null);
 
   // Fetch trade data from API
   useEffect(() => {
@@ -38,8 +40,12 @@ export default function TradeDetailPage() {
           throw new Error(`Failed to fetch trade: ${res.status}`);
         }
         const data = await res.json();
-        setTrade(data.trade);
-        setBankInfo(data.bankInfo || null);
+        if (data.trade?.kind === 'DESK') {
+          setDeskTrade(data as import('@/components/custody/types').DeskTrade);
+        } else {
+          setTrade(data.trade);
+          setBankInfo(data.bankInfo || null);
+        }
       } catch (err) {
         console.error('Failed to fetch trade:', err);
         setError(err instanceof Error ? err.message : 'Failed to load trade');
@@ -67,6 +73,17 @@ export default function TradeDetailPage() {
 
     return () => clearInterval(interval);
   }, [trade?.onchain_trade_id, refetchOnchain]);
+
+  // DESK trade uses different flow
+  if (deskTrade) {
+    return (
+      <div className="min-h-screen pt-20 pb-16" style={{ background: '#050806' }}>
+        <div className="max-w-5xl mx-auto px-4 py-8">
+          <DeskTradeView trade={deskTrade} />
+        </div>
+      </div>
+    );
+  }
 
   // Check if user is a party to this trade
   const isSeller = user?.id === trade?.seller_id;

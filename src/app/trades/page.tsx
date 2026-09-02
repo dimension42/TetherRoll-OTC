@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { EmptyState } from '@/components/ui/EmptyState';
 import Link from 'next/link';
 
-type Tab = 'pools' | 'taker' | 'fiat' | 'history';
+type Tab = 'pools' | 'taker' | 'fiat' | 'desk' | 'history';
 
 export default function TradesPage() {
   const { authenticated, ready, login } = useAuth();
@@ -48,6 +48,7 @@ export default function TradesPage() {
             { key: 'pools' as const, label: 'My Pools' },
             { key: 'taker' as const, label: 'As Taker' },
             { key: 'fiat' as const, label: 'Fiat Trades' },
+            { key: 'desk' as const, label: '🏦 Desk' },
             { key: 'history' as const, label: 'History' },
           ].map(t => (
             <button
@@ -55,9 +56,9 @@ export default function TradesPage() {
               onClick={() => setTab(t.key)}
               className="px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
               style={{
-                background: tab === t.key ? 'rgba(0,201,167,0.15)' : 'rgba(255,255,255,0.04)',
-                color: tab === t.key ? '#00c9a7' : '#888',
-                border: `1px solid ${tab === t.key ? 'rgba(0,201,167,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                background: tab === t.key ? (t.key === 'desk' ? 'rgba(245,166,35,0.15)' : 'rgba(0,201,167,0.15)') : 'rgba(255,255,255,0.04)',
+                color: tab === t.key ? (t.key === 'desk' ? '#f5a623' : '#00c9a7') : '#888',
+                border: `1px solid ${tab === t.key ? (t.key === 'desk' ? 'rgba(245,166,35,0.3)' : 'rgba(0,201,167,0.3)') : 'rgba(255,255,255,0.07)'}`,
               }}
             >
               {t.label}
@@ -73,7 +74,13 @@ export default function TradesPage() {
           <EmptyState
             icon="🔨"
             title="Under Construction"
-            description={`${tab === 'pools' ? 'Your created pools' : tab === 'taker' ? 'Pools you have taken' : tab === 'fiat' ? 'Your fiat trades' : 'Completed trades'} will appear here.`}
+            description={`${
+              tab === 'pools' ? 'Your created pools' :
+              tab === 'taker' ? 'Pools you have taken' :
+              tab === 'fiat' ? 'Your fiat trades' :
+              tab === 'desk' ? 'Your custody desk trades (BTC, Solana, Tron, KRW)' :
+              'Completed trades'
+            } will appear here.`}
             action={
               tab === 'pools' ? (
                 <Link href="/pools/create" className="btn-primary">

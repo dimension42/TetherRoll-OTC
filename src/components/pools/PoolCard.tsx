@@ -13,7 +13,8 @@ import { CHAIN_META } from '@/lib/chains';
  */
 export default function PoolCard({ pool, index }: { pool: Pool; index: number }) {
   const isFiat = pool.kind === 'FIAT';
-  const chainMeta = CHAIN_META[pool.chain_id];
+  const isDesk = pool.kind === 'DESK';
+  const chainMeta = !isDesk && pool.chain_id ? CHAIN_META[pool.chain_id] : null;
 
   // FIAT 풀: 표시 금액 포맷 (KRW는 fmtKrw 대신 toLocaleString)
   const offerDisplay = isFiat && pool.trade_type === 'FIAT_CRYPTO'
@@ -50,7 +51,20 @@ export default function PoolCard({ pool, index }: { pool: Pool; index: number })
           {/* Header: 체인 배지 + 상태 */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-2 flex-wrap">
-              {chainMeta && (
+              {isDesk && (
+                <span
+                  className="px-2 py-0.5 rounded-full text-xs font-bold"
+                  style={{
+                    background: 'rgba(245,166,35,0.1)',
+                    color: '#f5a623',
+                    border: '1px solid rgba(245,166,35,0.3)',
+                  }}
+                  title="Platform wallet escrow (not on-chain contract)"
+                >
+                  🏦 Custody
+                </span>
+              )}
+              {!isDesk && chainMeta && (
                 <span
                   className="px-2 py-0.5 rounded-full text-xs font-bold"
                   style={{
@@ -62,7 +76,7 @@ export default function PoolCard({ pool, index }: { pool: Pool; index: number })
                   {chainMeta.short}
                 </span>
               )}
-              {isFiat && (
+              {isFiat && !isDesk && (
                 <span
                   className="px-2 py-0.5 rounded-full text-xs font-semibold"
                   style={{

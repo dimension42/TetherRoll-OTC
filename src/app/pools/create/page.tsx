@@ -19,7 +19,7 @@ import { isNative, type TokenInfo } from '@/lib/tokens';
 import { type Chain } from 'viem/chains';
 
 type Step = 1 | 2 | 3 | 4 | 5;
-type Market = 'public' | 'vip';
+type Market = 'public' | 'vip' | 'desk';
 
 const EXPIRY_OPTIONS = [
   { label: '1h', seconds: 3600 },
@@ -380,6 +380,31 @@ export default function CreatePoolPage() {
                           </p>
                         </div>
                         {market === 'vip' && <span className="ml-auto text-lg">✓</span>}
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setMarket('desk')}
+                      className="p-4 rounded-xl text-left transition-all duration-200"
+                      style={{
+                        background: market === 'desk' ? 'rgba(245,166,35,0.08)' : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${market === 'desk' ? 'rgba(245,166,35,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                      }}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black"
+                          style={{ background: market === 'desk' ? 'rgba(245,166,35,0.2)' : 'rgba(255,255,255,0.05)', color: '#f5a623' }}
+                        >
+                          🏦
+                        </div>
+                        <div>
+                          <p className="font-bold text-white">Desk · Platform Custody</p>
+                          <p className="text-sm" style={{ color: '#666' }}>
+                            BTC, Solana, Tron, KRW — Platform wallet escrow
+                          </p>
+                        </div>
+                        {market === 'desk' && <span className="ml-auto text-lg">✓</span>}
                       </div>
                     </button>
                   </div>
