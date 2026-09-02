@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Web3Provider from '@/components/providers/Web3Provider';
 import Navbar from '@/components/layout/Navbar';
+import AnnouncementBar from '@/components/layout/AnnouncementBar';
+import WalletMismatchBanner from '@/components/wallet/WalletMismatchBanner';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -20,9 +22,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko" className="h-full">
-      <body className={`${inter.className} min-h-full`} style={{ background: '#080808' }}>
+      <body className={`${inter.className} min-h-full`} style={{ background: '#050806' }}>
         <Web3Provider>
           <Navbar />
+          <AnnouncementBar />
+          <WalletMismatchBanner />
           <main>{children}</main>
         </Web3Provider>
       </body>

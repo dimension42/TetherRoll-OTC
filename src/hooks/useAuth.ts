@@ -9,6 +9,7 @@ export type SessionUser = {
   displayName: string | null;
   vipStatus: 'none' | 'pending' | 'approved' | 'revoked';
   isAdmin: boolean;
+  wallets: Array<{ address: string; source: string; isPrimary: boolean }>;
 } | null;
 
 export type AuthState = {

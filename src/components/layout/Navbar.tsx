@@ -3,18 +3,20 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import LoginButton from '@/components/auth/LoginButton';
+import ConnectWallet from '@/components/wallet/ConnectWallet';
+import { Menu, X } from 'lucide-react';
+import { useState } from 'react';
 
 const navLinks = [
   { href: '/pools', label: 'Pools' },
-  { href: '/escrow', label: 'Escrow' },
-  { href: '/deposit', label: 'Deposit' },
+  { href: '/trades', label: 'Trades' },
   { href: '/features', label: 'Features' },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const { user, authenticated } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // VIP 메뉴는 승인된 계정의 화면에만 존재한다 — 미승인 유저에겐 노출 자체가 없음 (PRD §2.1)
   const showVip = authenticated && user?.vipStatus === 'approved';
@@ -68,7 +70,7 @@ export default function Navbar() {
                 }}
               >
                 <span
-                  className="w-1.5 h-1.5 rounded-full inline-block"
+                  className="w-1.5 h-1.5 rounded-full inline-block pulse-dot"
                   style={{ background: '#00ff88', boxShadow: '0 0 6px #00ff88' }}
                 />
                 VIP Desk
@@ -90,12 +92,69 @@ export default function Navbar() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link href="/pools/create" className="hidden sm:flex btn-primary text-sm py-2 px-4">
-              + New Pool
-            </Link>
-            <LoginButton />
+            <ConnectWallet />
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden w-8 h-8 flex items-center justify-center"
+              style={{ color: '#888' }}
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden pb-4 space-y-1">
+            {navLinks.map(link => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  color: pathname.startsWith(link.href) ? '#00c9a7' : '#888',
+                  background: pathname.startsWith(link.href) ? 'rgba(0,201,167,0.08)' : 'transparent',
+                }}
+              >
+                {link.label}
+              </Link>
+            ))}
+            {showVip && (
+              <Link
+                href="/vip"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  color: pathname.startsWith('/vip') ? '#00ff88' : '#8FA398',
+                  background: pathname.startsWith('/vip') ? 'rgba(0,255,136,0.06)' : 'transparent',
+                }}
+              >
+                VIP Desk
+              </Link>
+            )}
+            {showAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  color: pathname.startsWith('/admin') ? '#FF4D5E' : '#888',
+                  background: pathname.startsWith('/admin') ? 'rgba(255,77,94,0.08)' : 'transparent',
+                }}
+              >
+                Admin
+              </Link>
+            )}
+            <Link
+              href="/pools/create"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block btn-primary text-sm py-2 px-4 text-center"
+            >
+              + New Pool
+            </Link>
+          </div>
+        )}
       </div>
     </header>
   );

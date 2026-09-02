@@ -1,18 +1,31 @@
 'use client';
 
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
-import { WagmiProvider } from 'wagmi';
+import { WagmiProvider as BaseWagmiProvider } from 'wagmi';
+import { WagmiProvider as PrivyWagmiProvider } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PrivyProvider } from '@privy-io/react-auth';
+import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { config } from '@/lib/wagmi';
 import { AuthContext, type AuthState, type SessionUser } from '@/hooks/useAuth';
+import '@rainbow-me/rainbowkit/styles.css';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
 const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+const WALLETCONNECT_PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
 /**
  * 세션 기반 인증 프로바이더.
  * 서버 발급 httpOnly 쿠키(tr_session)가 유일한 신원 소스 — 클라이언트 저장소에 계정 정보를 두지 않는다.
+ * SessionUser에 wallets[] 추가 (WS3 요구사항)
  */
 function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser>(null);
@@ -35,7 +48,9 @@ function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(() => {
-    window.location.href = '/login';
+    const current = window.location.pathname;
+    const next = current !== '/' && !current.startsWith('/login') ? current : '';
+    window.location.href = `/login${next ? `?next=${encodeURIComponent(next)}` : ''}`;
   }, []);
 
   const logout = useCallback(async () => {
@@ -50,10 +65,11 @@ function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export default function Web3Provider({ children }: { children: ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // F-05 수정: SSR은 항상 렌더링, 클라이언트 전용 위젯만 mounted 가드
+  const app = <AuthProvider>{children}</AuthProvider>;
 
-  const app = <AuthProvider>{mounted ? children : null}</AuthProvider>;
+  // Privy 임베디드 지갑을 wagmi에 연결
+  const WagmiProvider = PRIVY_APP_ID ? PrivyWagmiProvider : BaseWagmiProvider;
 
   return (
     <WagmiProvider config={config}>
@@ -64,11 +80,32 @@ export default function Web3Provider({ children }: { children: ReactNode }) {
             config={{
               appearance: { theme: 'dark', accentColor: '#00c9a7' },
               loginMethods: ['email', 'google', 'twitter', 'telegram'],
-              embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
             }}
           >
-            {app}
+            {WALLETCONNECT_PROJECT_ID ? (
+              <RainbowKitProvider
+                theme={darkTheme({
+                  accentColor: '#00c9a7',
+                  accentColorForeground: '#000',
+                  borderRadius: 'medium',
+                })}
+              >
+                {app}
+              </RainbowKitProvider>
+            ) : (
+              app
+            )}
           </PrivyProvider>
+        ) : WALLETCONNECT_PROJECT_ID ? (
+          <RainbowKitProvider
+            theme={darkTheme({
+              accentColor: '#00c9a7',
+              accentColorForeground: '#000',
+              borderRadius: 'medium',
+            })}
+          >
+            {app}
+          </RainbowKitProvider>
         ) : (
           app
         )}
