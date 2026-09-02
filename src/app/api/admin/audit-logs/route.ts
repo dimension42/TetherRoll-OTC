@@ -1,10 +1,11 @@
 import { db } from '@/lib/db';
-import { requireAdmin, handleApiError } from '@/lib/auth/guards';
+import { requireRole } from '@/lib/auth/adminRoles';
+import { handleApiError } from '@/lib/auth/guards';
 
 /** GET /api/admin/audit-logs */
 export async function GET() {
   try {
-    await requireAdmin();
+    await requireRole('viewer');
     const { data, error } = await db()
       .from('admin_audit_logs')
       .select('id, action, target_type, target_id, before, after, created_at, users:admin_id (email, display_name)')
