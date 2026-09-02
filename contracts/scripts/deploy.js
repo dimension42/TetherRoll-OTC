@@ -44,6 +44,29 @@ async function main() {
     console.log("  Confirmed!");
   }
 
+  // Grant operational roles (admin gets both by default; env overrides add extra holders)
+  const ARBITRATOR_ROLE = await vault.ARBITRATOR_ROLE();
+  const PAUSER_ROLE = await vault.PAUSER_ROLE();
+  if (admin.toLowerCase() === deployer.address.toLowerCase()) {
+    console.log("
+Granting ARBITRATOR_ROLE + PAUSER_ROLE to admin", admin);
+    await (await vault.grantRole(ARBITRATOR_ROLE, admin)).wait();
+    await (await vault.grantRole(PAUSER_ROLE, admin)).wait();
+    for (const [envKey, role, label] of [
+      ["ARBITRATOR_ADDRESS", ARBITRATOR_ROLE, "ARBITRATOR_ROLE"],
+      ["PAUSER_ADDRESS", PAUSER_ROLE, "PAUSER_ROLE"],
+    ]) {
+      const extra = process.env[envKey];
+      if (extra && extra.toLowerCase() !== admin.toLowerCase()) {
+        console.log(`Granting ${label} to ${extra}`);
+        await (await vault.grantRole(role, extra)).wait();
+      }
+    }
+  } else {
+    console.log("
+Admin != deployer: roles must be granted by the admin wallet (see README)");
+  }
+
   // Get deploy block
   const receipt = await ethers.provider.getTransactionReceipt(deployTx.hash);
   const deployedBlock = receipt.blockNumber;

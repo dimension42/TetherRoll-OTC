@@ -357,6 +357,7 @@ contract EscrowVault is AccessControl, Pausable, ReentrancyGuard {
      */
     function expire(uint256 poolId) external nonReentrant {
         Pool storage pool = pools[poolId];
+        if (pool.maker == address(0)) revert PoolNotOpen(); // nonexistent pool
         if (pool.status != PoolStatus.OPEN) revert PoolNotOpen();
         if (block.timestamp < pool.expiresAt) revert NotExpired();
 
@@ -571,6 +572,7 @@ contract EscrowVault is AccessControl, Pausable, ReentrancyGuard {
      */
     function expireFiatTrade(uint256 tradeId) external nonReentrant {
         FiatTrade storage trade = trades[tradeId];
+        if (trade.seller == address(0)) revert TradeNotActive(); // nonexistent trade
         if (trade.status != TradeStatus.AWAITING_BOND && trade.status != TradeStatus.ACTIVE) {
             revert TradeNotActive();
         }
