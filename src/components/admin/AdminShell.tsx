@@ -12,6 +12,7 @@ import TradesTab from './tabs/TradesTab';
 import DisputesTab from './tabs/DisputesTab';
 import VipTab from './tabs/VipTab';
 import TreasuryTab from './tabs/TreasuryTab';
+import CustodyTab from './tabs/CustodyTab';
 import FeesTab from './tabs/FeesTab';
 import UsersTab from './tabs/UsersTab';
 import LogsTab from './tabs/LogsTab';
@@ -25,6 +26,7 @@ type TabKey =
   | 'disputes'
   | 'vip'
   | 'treasury'
+  | 'custody'
   | 'fees'
   | 'refunds'
   | 'users'
@@ -47,6 +49,7 @@ const TABS: TabDef[] = [
   { key: 'disputes', label: 'Disputes', icon: '⚖️', minRole: 'viewer', Component: DisputesTab },
   { key: 'vip', label: 'VIP', icon: '👑', minRole: 'ops', Component: VipTab },
   { key: 'treasury', label: 'Treasury', icon: '🏦', minRole: 'admin', Component: TreasuryTab },
+  { key: 'custody', label: 'Custody', icon: '🏦', minRole: 'ops', Component: CustodyTab },
   { key: 'fees', label: 'Fees', icon: '💰', minRole: 'admin', Component: FeesTab },
   { key: 'refunds', label: 'Refunds', icon: '↩️', minRole: 'ops', Component: RefundsTab },
   { key: 'users', label: 'Users', icon: '👥', minRole: 'viewer', Component: UsersTab },
