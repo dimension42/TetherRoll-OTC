@@ -86,20 +86,23 @@ export async function applyEvent(chainId: number, log: Log): Promise<void> {
         break;
     }
 
-    // onchain_txs CONFIRMED 기록 (중복 방지 마커)
-    await db()
+    // onchain_txs CONFIRMED 기록 (중복 방지 마커). 클라이언트가 /api/tx 로 먼저 남긴 PENDING 행이 있으면 상태만 올린다.
+    const marker = {
+      status: 'CONFIRMED',
+      block_number: Number(log.blockNumber),
+      confirmed_at: new Date().toISOString(),
+    };
+    const { data: txRow } = await db()
       .from('onchain_txs')
-      .upsert(
-        {
-          chain_id: chainId,
-          hash: log.transactionHash!,
-          kind: 'event',
-          status: 'CONFIRMED',
-          block_number: Number(log.blockNumber),
-          confirmed_at: new Date().toISOString(),
-        },
-        { onConflict: 'chain_id,hash', ignoreDuplicates: true }
-      );
+      .select('id')
+      .eq('chain_id', chainId)
+      .eq('hash', log.transactionHash!)
+      .maybeSingle();
+    if (txRow) {
+      await db().from('onchain_txs').update(marker).eq('id', txRow.id);
+    } else {
+      await db().from('onchain_txs').insert({ chain_id: chainId, hash: log.transactionHash!, kind: 'event', ...marker });
+    }
   } catch (e) {
     console.error('applyEvent failed:', e, log);
     // 파싱 실패 등은 무시 (알 수 없는 이벤트일 수 있음)

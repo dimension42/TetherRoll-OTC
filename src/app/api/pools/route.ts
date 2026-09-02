@@ -133,7 +133,7 @@ export async function POST(req: Request) {
         throw new AuthError(400, 'offerToken/offerAmount/requestToken/requestAmount required');
       }
       if (offerToken === requestToken) throw new AuthError(400, 'Cannot swap the same token');
-      if (BigInt(offerAmount) === 0n || BigInt(requestAmount) === 0n) throw new AuthError(400, 'Amounts must be > 0');
+      if (BigInt(offerAmount) === BigInt(0) || BigInt(requestAmount) === BigInt(0)) throw new AuthError(400, 'Amounts must be > 0');
       if (!isChainDeployed(chainId)) throw new AuthError(400, 'EscrowVault is not deployed on this chain');
 
       const offerInfo = findToken(chainId, offerToken);
@@ -189,7 +189,7 @@ export async function POST(req: Request) {
     if (!cryptoToken || !cryptoAmount || !fiatAmount) {
       throw new AuthError(400, 'Crypto token/amount and fiat amount required');
     }
-    if (BigInt(cryptoAmount) === 0n || BigInt(fiatAmount) === 0n) throw new AuthError(400, 'Amounts must be > 0');
+    if (BigInt(cryptoAmount) === BigInt(0) || BigInt(fiatAmount) === BigInt(0)) throw new AuthError(400, 'Amounts must be > 0');
     const tokenInfo = findToken(chainId, cryptoToken);
     if (!tokenInfo) throw new AuthError(400, 'Token not whitelisted on this chain');
 
