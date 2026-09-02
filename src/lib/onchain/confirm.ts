@@ -7,7 +7,8 @@ import type { AppUser } from '@/lib/auth/guards';
 
 /**
  * 트랜잭션 확인 — 유저가 전송한 tx의 receipt 조회 + 이벤트 파싱 + DB 반영.
- * Pending이면 { status: 'PENDING' } 응답, 성공이면 디코딩된 이벤트 args 반환.
+ * Pending이면 { status: 'PENDING' } (HTTP 202로 응답), 성공이면 디코딩된 이벤트 args 반환.
+ * receipt.to == escrow address, receipt.from ∈ user wallets 검증.
  */
 
 export interface ConfirmOptions {
@@ -33,7 +34,7 @@ export async function confirmTx(opts: ConfirmOptions): Promise<{ status: 'PENDIN
   }
 
   // 수신자가 EscrowVault 컨트랙트인지 확인
-  if (receipt.to?.toLowerCase() !== contract.address.toLowerCase()) {
+  if (!receipt.to || receipt.to.toLowerCase() !== contract.address.toLowerCase()) {
     throw new AuthError(400, 'Transaction not sent to EscrowVault');
   }
 
@@ -69,14 +70,17 @@ export async function confirmTx(opts: ConfirmOptions): Promise<{ status: 'PENDIN
   // onchain_txs CONFIRMED 기록
   await db()
     .from('onchain_txs')
-    .update({
-      status: 'CONFIRMED',
-      block_number: Number(receipt.blockNumber),
-      gas_used: receipt.gasUsed.toString(),
-      confirmed_at: new Date().toISOString(),
-    })
-    .eq('chain_id', chainId)
-    .eq('hash', hash);
+    .upsert(
+      {
+        chain_id: chainId,
+        hash,
+        status: 'CONFIRMED',
+        block_number: Number(receipt.blockNumber),
+        gas_used: receipt.gasUsed.toString(),
+        confirmed_at: new Date().toISOString(),
+      },
+      { onConflict: 'chain_id,hash' }
+    );
 
   const decoded = decodeEventLog({
     abi: contract.abi,
