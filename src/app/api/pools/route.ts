@@ -1,36 +1,73 @@
+import { z } from 'zod';
+import { formatUnits } from 'viem';
+import { requireUser, handleApiError, AuthError, getSessionUser, requireNotPaused } from '@/lib/auth/guards';
+import { parseBody, parseQuery, zAddress, zBigIntStr, zChainId } from '@/lib/validate';
+import { rateLimitByUser } from '@/lib/ratelimit';
 import { db } from '@/lib/db';
-import { getSessionUser, requireUser, handleApiError } from '@/lib/auth/guards';
+import { findToken, FIAT_CURRENCIES } from '@/lib/tokens';
+import { isChainDeployed } from '@/lib/contracts/addresses';
 
 /**
- * GET /api/pools — 풀 목록.
- * VIP 미승인 계정에는 fiat(vip) 풀이 응답에서 아예 제외된다 (서버 레벨 분리, PRD §2.1).
+ * 풀 API v2 (온체인 연동).
+ *
+ * 저장 규약 (B-01 확정):
+ *  - SWAP            : offer_token / request_token 둘 다 컨트랙트 주소(0x0 = 네이티브). *_amount_wei 는 토큰 최소단위.
+ *  - FIAT CRYPTO_FIAT: offer = 크립토 토큰(offer_token, offer_amount_wei), request = fiat (request_symbol = 'KRW', request_amount = 원화 정수)
+ *  - FIAT FIAT_CRYPTO: offer = fiat (offer_symbol = 'KRW', offer_amount = 원화 정수), request = 크립토 토큰(request_token, request_amount_wei)
+ *  - 레거시 표시 컬럼(offer_symbol/offer_amount/request_symbol/request_amount)은 사람이 읽는 값으로 항상 함께 채운다.
+ *
+ * 상태: SWAP 은 DRAFT → (클라 createPool tx) → LOCKING → confirm/인덱서 → OPEN.
+ *       FIAT 풀은 오프체인 광고이므로 생성 즉시 OPEN (온체인 락은 트레이드 단위로 발생).
  */
+
+const LIST_STATUSES = ['OPEN', 'PARTIAL', 'FILLED', 'CANCELLED', 'EXPIRED', 'COMPLETED', 'MATCHED'] as const;
+const PAGE_SIZE = 50;
+
+const getPoolsSchema = z.object({
+  scope: z.enum(['public', 'vip']).optional(),
+  status: z.enum(LIST_STATUSES).optional(),
+  chainId: z.number().int().optional(),
+  cursor: z.string().datetime({ offset: true }).optional(),
+});
+
 export async function GET(req: Request) {
   try {
-    const user = await getSessionUser();
-    const isVip = user?.vip_status === 'approved' &&
-      (!user.vip_expires_at || new Date(user.vip_expires_at) > new Date());
-
     const url = new URL(req.url);
-    const scope = url.searchParams.get('scope');
+    const { scope, status, chainId, cursor } = parseQuery(url, getPoolsSchema);
+
+    const user = await getSessionUser();
+    const isVip =
+      user?.vip_status === 'approved' && (!user.vip_expires_at || new Date(user.vip_expires_at) > new Date());
 
     let query = db()
       .from('pools')
-      .select('id, visibility, trade_type, offer_symbol, offer_chain, offer_amount, request_symbol, request_chain, request_amount, fiat_currency, collateral_mode, collateral_pct, status, filled_pct, chain_id, expires_at, created_at')
-      .neq('status', 'HIDDEN')
+      .select('*')
+      .not('status', 'in', '(HIDDEN,DRAFT,LOCKING)')
       .order('created_at', { ascending: false })
-      .limit(100);
+      .limit(PAGE_SIZE);
 
     if (scope === 'vip') {
-      if (!isVip) return Response.json({ error: 'Not found' }, { status: 404 });
+      if (!isVip) throw new AuthError(404, 'Not found');
       query = query.eq('visibility', 'vip');
     } else {
       query = query.eq('visibility', 'public');
     }
 
+    if (status) query = query.eq('status', status);
+    if (chainId) query = query.eq('chain_id', chainId);
+
+    // B-06: 만료된 OPEN/PARTIAL 풀은 목록에서 제외 (DB 상태 갱신은 cron/expire 가 담당)
+    const now = new Date().toISOString();
+    query = query.or(`expires_at.is.null,expires_at.gt.${now},status.not.in.(OPEN,PARTIAL)`);
+
+    if (cursor) query = query.lt('created_at', cursor);
+
     const { data, error } = await query;
     if (error) throw error;
-    return Response.json({ pools: data });
+
+    const pools = data ?? [];
+    const nextCursor = pools.length === PAGE_SIZE ? pools[pools.length - 1].created_at : null;
+    return Response.json({ pools, nextCursor });
   } catch (e) {
     return handleApiError(e);
   }
@@ -38,115 +75,163 @@ export async function GET(req: Request) {
 
 /**
  * POST /api/pools — 풀 생성.
- * CRYPTO_CRYPTO는 public, fiat 관련은 VIP 전용(미승인 유저에게는 404로 숨김).
+ * SWAP : { chainId, kind:'SWAP', offerToken, offerAmount(wei), requestToken, requestAmount(wei), expiresAt, allowPartial, visibility? }
+ * FIAT : { chainId, kind:'FIAT', tradeType?:'CRYPTO_FIAT'|'FIAT_CRYPTO', fiatCurrency:'KRW',
+ *          offerToken+offerAmount(wei) (크립토 판매) 또는 requestToken+requestAmount(wei) (크립토 매수),
+ *          fiatAmount(원화 정수 문자열), expiresAt, allowPartial, collateralMode?, collateralPct? }
+ *        (하위호환: fiatAmount 대신 CRYPTO_FIAT 은 requestAmount, FIAT_CRYPTO 는 offerAmount 에 원화를 넣어도 됨)
  */
+const createPoolSchema = z.object({
+  chainId: zChainId,
+  kind: z.enum(['SWAP', 'FIAT']),
+  tradeType: z.enum(['CRYPTO_FIAT', 'FIAT_CRYPTO']).optional(),
+  offerToken: zAddress.optional(),
+  offerAmount: zBigIntStr.optional(),
+  requestToken: zAddress.optional(),
+  requestAmount: zBigIntStr.optional(),
+  fiatCurrency: z.string().min(3).max(3).optional(),
+  fiatAmount: zBigIntStr.optional(),
+  expiresAt: z.string().datetime({ offset: true }),
+  allowPartial: z.boolean().default(true),
+  visibility: z.enum(['public', 'vip']).optional(),
+  collateralMode: z.enum(['NONE', 'KRW_SIDE_LOCKS']).optional(),
+  collateralPct: z.number().int().min(10).max(100).optional(),
+});
+
+const MAX_POOL_DURATION_MS = 30 * 24 * 3600 * 1000;
+
+function humanAmount(wei: string, decimals: number): number {
+  return Number(formatUnits(BigInt(wei), decimals));
+}
+
 export async function POST(req: Request) {
   try {
     const user = await requireUser();
+    await requireNotPaused();
+    await rateLimitByUser(user.id, 'pool_create', 30, 3600);
 
-    const body = await req.json();
-    const {
-      tradeType,
-      offerSymbol,
-      offerChain,
-      offerAmount,
-      requestSymbol,
-      requestChain,
-      requestAmount,
-      fiatCurrency,
-      collateralMode,
-      collateralPct,
-      expiresAt,
-    } = body;
+    const body = await parseBody(req, createPoolSchema);
+    const { chainId, kind, expiresAt, allowPartial } = body;
 
-    // 기본 검증
-    if (!tradeType || !['CRYPTO_CRYPTO', 'CRYPTO_FIAT', 'FIAT_CRYPTO'].includes(tradeType)) {
-      return Response.json({ error: 'Invalid tradeType' }, { status: 400 });
-    }
+    const exp = new Date(expiresAt);
+    if (exp <= new Date()) throw new AuthError(400, 'expiresAt must be in the future');
+    if (exp.getTime() - Date.now() > MAX_POOL_DURATION_MS) throw new AuthError(400, 'expiresAt exceeds 30 days');
 
-    // 금액 검증
-    const offerAmt = Number(offerAmount);
-    const requestAmt = Number(requestAmount);
-    if (!Number.isFinite(offerAmt) || offerAmt <= 0 || !Number.isFinite(requestAmt) || requestAmt <= 0) {
-      return Response.json({ error: 'Invalid amounts' }, { status: 400 });
-    }
+    // maker 지갑 (온체인 주체) — primary 지갑
+    const { data: wallets } = await db().from('user_wallets').select('address, is_primary').eq('user_id', user.id);
+    const makerAddress =
+      wallets?.find((w: { is_primary: boolean }) => w.is_primary)?.address ?? wallets?.[0]?.address ?? null;
+    if (!makerAddress) throw new AuthError(400, 'Link a wallet before creating a pool');
 
-    // 심볼 검증 (1~10자 영대문자)
-    const symbolRegex = /^[A-Z]{1,10}$/;
-    if (!symbolRegex.test(offerSymbol) || !symbolRegex.test(requestSymbol)) {
-      return Response.json({ error: 'Invalid symbol format' }, { status: 400 });
-    }
+    const isVip =
+      user.vip_status === 'approved' && (!user.vip_expires_at || new Date(user.vip_expires_at) > new Date());
 
-    // expiresAt 검증 (미래 시각)
-    if (expiresAt) {
-      const exp = new Date(expiresAt);
-      if (exp <= new Date()) {
-        return Response.json({ error: 'expiresAt must be in the future' }, { status: 400 });
+    // ── SWAP ──
+    if (kind === 'SWAP') {
+      const { offerToken, offerAmount, requestToken, requestAmount } = body;
+      if (!offerToken || !requestToken || !offerAmount || !requestAmount) {
+        throw new AuthError(400, 'offerToken/offerAmount/requestToken/requestAmount required');
       }
+      if (offerToken === requestToken) throw new AuthError(400, 'Cannot swap the same token');
+      if (BigInt(offerAmount) === 0n || BigInt(requestAmount) === 0n) throw new AuthError(400, 'Amounts must be > 0');
+      if (!isChainDeployed(chainId)) throw new AuthError(400, 'EscrowVault is not deployed on this chain');
+
+      const offerInfo = findToken(chainId, offerToken);
+      const requestInfo = findToken(chainId, requestToken);
+      if (!offerInfo || !requestInfo) throw new AuthError(400, 'Token not whitelisted on this chain');
+
+      const visibility = body.visibility === 'vip' ? (isVip ? 'vip' : null) : 'public';
+      if (!visibility) throw new AuthError(404, 'Not found');
+
+      const { data, error } = await db()
+        .from('pools')
+        .insert({
+          creator_id: user.id,
+          kind: 'SWAP',
+          visibility,
+          trade_type: 'CRYPTO_CRYPTO',
+          chain_id: chainId,
+          maker_address: makerAddress,
+          offer_token: offerToken,
+          request_token: requestToken,
+          offer_symbol: offerInfo.symbol,
+          request_symbol: requestInfo.symbol,
+          offer_decimals: offerInfo.decimals,
+          request_decimals: requestInfo.decimals,
+          offer_amount_wei: offerAmount,
+          request_amount_wei: requestAmount,
+          offer_remaining_wei: offerAmount,
+          offer_amount: humanAmount(offerAmount, offerInfo.decimals),
+          request_amount: humanAmount(requestAmount, requestInfo.decimals),
+          allow_partial: allowPartial,
+          status: 'DRAFT',
+          expires_at: exp.toISOString(),
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      return Response.json({ id: data.id, status: 'DRAFT' });
     }
 
-    // fiat 풀인 경우 VIP 전용
-    const isFiat = tradeType !== 'CRYPTO_CRYPTO';
-    let visibility: 'public' | 'vip' = 'public';
-    let finalFiatCurrency: string | null = null;
-    let finalCollateralMode: 'NONE' | 'KRW_SIDE_LOCKS' = 'NONE';
-    let finalCollateralPct: number | null = null;
+    // ── FIAT (VIP 전용, 존재 은닉) ──
+    if (!isVip) throw new AuthError(404, 'Not found');
 
-    if (isFiat) {
-      // VIP 승인 여부 체크
-      const isVip = user.vip_status === 'approved' &&
-        (!user.vip_expires_at || new Date(user.vip_expires_at) > new Date());
+    const fiatCurrency = (body.fiatCurrency ?? 'KRW').toUpperCase();
+    if (!FIAT_CURRENCIES.some(c => c.code === fiatCurrency)) throw new AuthError(400, 'Unsupported fiat currency');
 
-      if (!isVip) {
-        // 미승인 유저에게는 fiat 풀 생성 불가(존재 은닉)
-        return Response.json({ error: 'Not found' }, { status: 404 });
-      }
+    // 방향 결정: 명시된 tradeType > 어느 쪽에 토큰이 있는지
+    const tradeType: 'CRYPTO_FIAT' | 'FIAT_CRYPTO' =
+      body.tradeType ?? (body.offerToken ? 'CRYPTO_FIAT' : body.requestToken ? 'FIAT_CRYPTO' : 'CRYPTO_FIAT');
 
-      visibility = 'vip';
-
-      // fiatCurrency 필수
-      if (!fiatCurrency || typeof fiatCurrency !== 'string' || fiatCurrency.length !== 3) {
-        return Response.json({ error: 'Invalid fiatCurrency' }, { status: 400 });
-      }
-      finalFiatCurrency = fiatCurrency.toUpperCase();
-
-      // collateral 처리
-      if (collateralMode === 'KRW_SIDE_LOCKS') {
-        finalCollateralMode = 'KRW_SIDE_LOCKS';
-        const pct = Number(collateralPct);
-        if (!Number.isInteger(pct) || pct < 10 || pct > 100) {
-          return Response.json({ error: 'collateralPct must be 10~100' }, { status: 400 });
-        }
-        finalCollateralPct = pct;
-      }
+    const cryptoToken = tradeType === 'CRYPTO_FIAT' ? body.offerToken : body.requestToken;
+    const cryptoAmount = tradeType === 'CRYPTO_FIAT' ? body.offerAmount : body.requestAmount;
+    const fiatAmount = body.fiatAmount ?? (tradeType === 'CRYPTO_FIAT' ? body.requestAmount : body.offerAmount);
+    if (!cryptoToken || !cryptoAmount || !fiatAmount) {
+      throw new AuthError(400, 'Crypto token/amount and fiat amount required');
     }
+    if (BigInt(cryptoAmount) === 0n || BigInt(fiatAmount) === 0n) throw new AuthError(400, 'Amounts must be > 0');
+    const tokenInfo = findToken(chainId, cryptoToken);
+    if (!tokenInfo) throw new AuthError(400, 'Token not whitelisted on this chain');
 
-    // DB 삽입
+    const collateralMode = body.collateralMode ?? 'NONE';
+    const collateralPct = collateralMode === 'KRW_SIDE_LOCKS' ? body.collateralPct : null;
+    if (collateralMode === 'KRW_SIDE_LOCKS' && !collateralPct) throw new AuthError(400, 'collateralPct required');
+
+    const cryptoHuman = humanAmount(cryptoAmount, tokenInfo.decimals);
+    const fiatHuman = Number(fiatAmount);
+    const isSell = tradeType === 'CRYPTO_FIAT';
+
     const { data, error } = await db()
       .from('pools')
       .insert({
         creator_id: user.id,
-        visibility,
+        kind: 'FIAT',
+        visibility: 'vip',
         trade_type: tradeType,
-        offer_symbol: offerSymbol.toUpperCase(),
-        offer_chain: offerChain || null,
-        offer_amount: offerAmt,
-        request_symbol: requestSymbol.toUpperCase(),
-        request_chain: requestChain || null,
-        request_amount: requestAmt,
-        fiat_currency: finalFiatCurrency,
-        collateral_mode: finalCollateralMode,
-        collateral_pct: finalCollateralPct,
+        chain_id: chainId,
+        maker_address: makerAddress,
+        fiat_currency: fiatCurrency,
+        offer_token: isSell ? cryptoToken : null,
+        request_token: isSell ? null : cryptoToken,
+        offer_symbol: isSell ? tokenInfo.symbol : fiatCurrency,
+        request_symbol: isSell ? fiatCurrency : tokenInfo.symbol,
+        offer_decimals: isSell ? tokenInfo.decimals : 0,
+        request_decimals: isSell ? 0 : tokenInfo.decimals,
+        offer_amount_wei: isSell ? cryptoAmount : fiatAmount,
+        request_amount_wei: isSell ? fiatAmount : cryptoAmount,
+        offer_remaining_wei: isSell ? cryptoAmount : fiatAmount,
+        offer_amount: isSell ? cryptoHuman : fiatHuman,
+        request_amount: isSell ? fiatHuman : cryptoHuman,
+        collateral_mode: collateralMode,
+        collateral_pct: collateralPct,
+        allow_partial: allowPartial,
         status: 'OPEN',
-        filled_pct: 0,
-        expires_at: expiresAt || null,
+        expires_at: exp.toISOString(),
       })
       .select('id')
       .single();
-
     if (error) throw error;
-
-    return Response.json({ ok: true, id: data.id });
+    return Response.json({ id: data.id, status: 'OPEN' });
   } catch (e) {
     return handleApiError(e);
   }

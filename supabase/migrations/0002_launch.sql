@@ -89,6 +89,16 @@ alter table public.pools
   add column if not exists close_tx_hash text,
   add column if not exists taken_count int not null default 0;
 
+-- 레거시 표시 컬럼은 v2에서 선택값 (온체인 직접 생성 풀은 인덱서가 채우지 못할 수 있음)
+alter table public.pools
+  alter column trade_type drop not null,
+  alter column offer_symbol drop not null,
+  alter column request_symbol drop not null,
+  alter column offer_amount drop not null,
+  alter column request_amount drop not null,
+  alter column offer_amount set default 0,
+  alter column request_amount set default 0;
+
 alter table public.pools drop constraint if exists pools_status_check;
 alter table public.pools add constraint pools_status_check check (status in
   ('DRAFT','LOCKING','OPEN','PARTIAL','FILLED','MATCHED','CANCELLED','COMPLETED','EXPIRED','HIDDEN'));

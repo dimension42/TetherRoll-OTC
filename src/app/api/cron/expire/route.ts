@@ -41,12 +41,27 @@ export async function GET(req: Request) {
       .select();
     const rollsExpired = rollsRes.data?.length ?? 0;
 
+    // 온체인 락 없이 24시간 이상 방치된 DRAFT/LOCKING 풀 정리 (tx 미전송 또는 유실)
+    const staleCutoff = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const staleRes = await db()
+      .from('pools')
+      .update({ status: 'CANCELLED', updated_at: now })
+      .in('status', ['DRAFT', 'LOCKING'])
+      .lte('created_at', staleCutoff)
+      .select();
+    const staleCancelled = staleRes.data?.length ?? 0;
+
+    // 레이트리밋 윈도우 행 정리 (1일 이상 지난 것)
+    const rlCutoff = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    await db().from('rate_limits').delete().lte('window_start', rlCutoff);
+
     return Response.json({
       ok: true,
       expired: {
         pools: poolsExpired ?? 0,
         trades: tradesExpired ?? 0,
         rolls: rollsExpired ?? 0,
+        staleDrafts: staleCancelled,
       },
     });
   } catch (e) {

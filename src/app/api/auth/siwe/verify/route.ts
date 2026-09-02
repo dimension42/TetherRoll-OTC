@@ -28,15 +28,20 @@ export async function POST(req: Request) {
     }
 
     // B-03: domain 검증
-    const expectedDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || req.headers.get('host') || '';
-    if (parsed.domain !== expectedDomain) {
+    // 허용 도메인 = 설정값(NEXT_PUBLIC_APP_DOMAIN) 또는 실제 요청 Host. 둘 중 하나와 일치해야 한다.
+    const requestHost = req.headers.get('host') || '';
+    const allowedDomains = [process.env.NEXT_PUBLIC_APP_DOMAIN, requestHost].filter(Boolean) as string[];
+    if (!parsed.domain || !allowedDomains.includes(parsed.domain)) {
       throw new AuthError(401, 'Invalid domain');
     }
 
-    // B-03: uri origin 검증
+    // B-03: uri origin 검증 — 요청 Origin 헤더(있으면) 또는 허용 도메인의 http(s) origin
     const uriOrigin = parsed.uri ? new URL(parsed.uri).origin : '';
-    const requestOrigin = req.headers.get('origin') || `https://${expectedDomain}`;
-    if (uriOrigin !== requestOrigin) {
+    const originHeader = req.headers.get('origin');
+    const allowedOrigins = new Set<string>();
+    if (originHeader) allowedOrigins.add(originHeader);
+    for (const d of allowedDomains) { allowedOrigins.add(`https://${d}`); allowedOrigins.add(`http://${d}`); }
+    if (!uriOrigin || !allowedOrigins.has(uriOrigin)) {
       throw new AuthError(401, 'Invalid URI origin');
     }
 
