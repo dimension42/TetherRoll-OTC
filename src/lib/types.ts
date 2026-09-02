@@ -9,7 +9,7 @@
 
 export type PoolStatus =
   | 'DRAFT' | 'LOCKING' | 'OPEN' | 'PARTIAL' | 'FILLED' | 'MATCHED' | 'CANCELLED' | 'COMPLETED' | 'EXPIRED' | 'HIDDEN';
-export type PoolKind = 'SWAP' | 'FIAT';
+export type PoolKind = 'SWAP' | 'FIAT' | 'DESK';
 export type TradeType = 'CRYPTO_CRYPTO' | 'CRYPTO_FIAT' | 'FIAT_CRYPTO';
 
 /** Pool v2 — EscrowVault 기반. 온체인 락 전(DRAFT/FIAT 광고)에는 온체인 필드가 null 일 수 있다. */
@@ -57,8 +57,9 @@ export interface Pool {
 
 export type TradeStatus =
   | 'PENDING' | 'AWAITING_BOND' | 'ACTIVE' | 'PAID' | 'RELEASED' | 'CONFIRMED'
-  | 'CANCELLED' | 'EXPIRED' | 'DISPUTED' | 'RESOLVED' | 'FAILED';
-export type TradeKind = 'SWAP' | 'FIAT';
+  | 'CANCELLED' | 'EXPIRED' | 'DISPUTED' | 'RESOLVED' | 'FAILED'
+  | 'AWAITING_DEPOSITS' | 'DEPOSITED' | 'PAYOUT_PENDING' | 'COMPLETED' | 'REFUNDING' | 'REFUNDED';
+export type TradeKind = 'SWAP' | 'FIAT' | 'DESK';
 
 export interface Trade {
   id: string;
@@ -130,3 +131,14 @@ export interface OnchainTx {
   created_at: string;
   confirmed_at?: string | null;
 }
+
+// Custody types (DESK trades)
+export type {
+  CustodyAsset,
+  CustodyAssetPublic,
+  CustodyLeg,
+  CustodyLegStatus,
+  CustodyPayout,
+  CustodyPayoutStatus,
+  DepositInstruction,
+} from './custody/types';

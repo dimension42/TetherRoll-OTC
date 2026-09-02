@@ -6,6 +6,7 @@ import { rateLimitByUser } from '@/lib/ratelimit';
 import { db } from '@/lib/db';
 import { findToken, FIAT_CURRENCIES } from '@/lib/tokens';
 import { isChainDeployed } from '@/lib/contracts/addresses';
+import { getAsset } from '@/lib/custody/assets';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,12 +86,14 @@ export async function GET(req: Request) {
  */
 const createPoolSchema = z.object({
   chainId: zChainId,
-  kind: z.enum(['SWAP', 'FIAT']),
-  tradeType: z.enum(['CRYPTO_FIAT', 'FIAT_CRYPTO']).optional(),
+  kind: z.enum(['SWAP', 'FIAT', 'DESK']),
+  tradeType: z.enum(['CRYPTO_FIAT', 'FIAT_CRYPTO', 'CRYPTO_CRYPTO']).optional(),
   offerToken: zAddress.optional(),
   offerAmount: zBigIntStr.optional(),
+  offerAssetId: z.string().uuid().optional(),
   requestToken: zAddress.optional(),
   requestAmount: zBigIntStr.optional(),
+  requestAssetId: z.string().uuid().optional(),
   fiatCurrency: z.string().min(3).max(3).optional(),
   fiatAmount: zBigIntStr.optional(),
   expiresAt: z.string().datetime({ offset: true }),
@@ -98,6 +101,15 @@ const createPoolSchema = z.object({
   visibility: z.enum(['public', 'vip']).optional(),
   collateralMode: z.enum(['NONE', 'KRW_SIDE_LOCKS']).optional(),
   collateralPct: z.number().int().min(10).max(100).optional(),
+  deadline: z.string().datetime({ offset: true }).optional(),
+  // DESK maker inputs
+  receiveAddress: z.string().optional(),
+  refundAddress: z.string().optional(),
+  bankInfo: z.object({
+    bank: z.string(),
+    account: z.string(),
+    holder: z.string(),
+  }).optional(),
 });
 
 const MAX_POOL_DURATION_MS = 30 * 24 * 3600 * 1000;
@@ -175,6 +187,106 @@ export async function POST(req: Request) {
       return Response.json({ id: data.id, status: 'DRAFT' });
     }
 
+    // ── DESK (custody) ──
+    if (kind === 'DESK') {
+      const { offerAssetId, requestAssetId, offerAmount, requestAmount, fiatCurrency: deskFiat, receiveAddress, refundAddress, bankInfo } = body;
+      if (!offerAssetId && !requestAssetId && !deskFiat) {
+        throw new AuthError(400, 'DESK requires at least one custody asset or fiat');
+      }
+
+      const offerAsset = offerAssetId ? await getAsset(offerAssetId) : null;
+      const requestAsset = requestAssetId ? await getAsset(requestAssetId) : null;
+
+      if (offerAssetId && (!offerAsset || !offerAsset.enabled)) {
+        throw new AuthError(400, 'Offer asset not found or disabled');
+      }
+      if (requestAssetId && (!requestAsset || !requestAsset.enabled)) {
+        throw new AuthError(400, 'Request asset not found or disabled');
+      }
+
+      if (!offerAmount || !requestAmount) {
+        throw new AuthError(400, 'offerAmount and requestAmount required');
+      }
+      if (BigInt(offerAmount) === BigInt(0) || BigInt(requestAmount) === BigInt(0)) {
+        throw new AuthError(400, 'Amounts must be > 0');
+      }
+
+      // Determine trade type
+      let deskTradeType: import('@/lib/types').TradeType = 'CRYPTO_CRYPTO';
+      if (deskFiat) {
+        if (!isVip) throw new AuthError(404, 'Not found');
+        deskTradeType = offerAssetId ? 'CRYPTO_FIAT' : 'FIAT_CRYPTO';
+      }
+
+      // Validate maker inputs
+      // receiveAddress: required when maker receives a custody asset (request side)
+      if (requestAssetId && requestAsset) {
+        if (!receiveAddress) throw new AuthError(400, 'receiveAddress required for receiving custody asset');
+        const { validateReceiveAddress } = await import('@/lib/custody/address');
+        if (!validateReceiveAddress(requestAsset, receiveAddress)) {
+          throw new AuthError(400, 'Invalid receiveAddress for request asset');
+        }
+      }
+
+      // refundAddress: required when maker deposits a custody asset (offer side)
+      if (offerAssetId && offerAsset) {
+        if (!refundAddress) throw new AuthError(400, 'refundAddress required for depositing custody asset');
+        const { validateReceiveAddress } = await import('@/lib/custody/address');
+        if (!validateReceiveAddress(offerAsset, refundAddress)) {
+          throw new AuthError(400, 'Invalid refundAddress for offer asset');
+        }
+      }
+
+      // bankInfo: required when maker receives fiat (request side is fiat)
+      let makerBankInfoEnc: string | null = null;
+      if (deskFiat && !offerAssetId) {
+        // FIAT_CRYPTO: maker receives KRW
+        if (!bankInfo) throw new AuthError(400, 'bankInfo required for receiving fiat');
+        if (!bankInfo.bank || !bankInfo.account || !bankInfo.holder) {
+          throw new AuthError(400, 'bankInfo must include bank, account, and holder');
+        }
+        const { encryptJson } = await import('@/lib/crypto');
+        makerBankInfoEnc = encryptJson(bankInfo);
+      }
+
+      const deskVis = body.visibility === 'vip' || deskFiat ? 'vip' : 'public';
+      if (deskVis === 'vip' && !isVip) throw new AuthError(404, 'Not found');
+
+      const { data: deskData, error: deskErr } = await db()
+        .from('pools')
+        .insert({
+          creator_id: user.id,
+          kind: 'DESK',
+          visibility: deskVis,
+          trade_type: deskTradeType,
+          chain_id: chainId,
+          maker_address: makerAddress,
+          offer_asset_id: offerAssetId || null,
+          request_asset_id: requestAssetId || null,
+          fiat_currency: deskFiat || null,
+          offer_symbol: offerAsset?.symbol || deskFiat || 'Unknown',
+          request_symbol: requestAsset?.symbol || deskFiat || 'Unknown',
+          offer_decimals: offerAsset?.decimals || 0,
+          request_decimals: requestAsset?.decimals || 0,
+          offer_amount_wei: offerAmount,
+          request_amount_wei: requestAmount,
+          offer_remaining_wei: offerAmount,
+          offer_amount: offerAsset ? humanAmount(offerAmount, offerAsset.decimals) : Number(offerAmount),
+          request_amount: requestAsset ? humanAmount(requestAmount, requestAsset.decimals) : Number(requestAmount),
+          allow_partial: allowPartial,
+          status: 'OPEN',
+          expires_at: exp.toISOString(),
+          deadline: body.deadline || exp.toISOString(),
+          maker_receive_address: receiveAddress || null,
+          maker_refund_address: refundAddress || null,
+          maker_bank_info_enc: makerBankInfoEnc,
+        })
+        .select('id')
+        .single();
+      if (deskErr) throw deskErr;
+      return Response.json({ id: deskData.id, status: 'OPEN' });
+    }
+
     // ── FIAT (VIP 전용, 존재 은닉) ──
     if (!isVip) throw new AuthError(404, 'Not found');
 
@@ -182,7 +294,7 @@ export async function POST(req: Request) {
     if (!FIAT_CURRENCIES.some(c => c.code === fiatCurrency)) throw new AuthError(400, 'Unsupported fiat currency');
 
     // 방향 결정: 명시된 tradeType > 어느 쪽에 토큰이 있는지
-    const tradeType: 'CRYPTO_FIAT' | 'FIAT_CRYPTO' =
+    const tradeType =
       body.tradeType ?? (body.offerToken ? 'CRYPTO_FIAT' : body.requestToken ? 'FIAT_CRYPTO' : 'CRYPTO_FIAT');
 
     const cryptoToken = tradeType === 'CRYPTO_FIAT' ? body.offerToken : body.requestToken;

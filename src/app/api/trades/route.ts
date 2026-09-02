@@ -8,9 +8,10 @@ import { encryptJson } from '@/lib/crypto';
 export const dynamic = 'force-dynamic';
 
 /**
- * POST /api/trades — 거래 생성 (SWAP 또는 FIAT).
+ * POST /api/trades — 거래 생성 (SWAP, FIAT, DESK).
  * SWAP: { poolId, offerWanted, takerAddress? } → PENDING (클라가 take() 전송)
  * FIAT: { poolId, fiatAmount?, bankInfo:{bank,account,holder}, counterpartyAddress? } → PENDING
+ * DESK: { poolId, amount?, receiveAddress?, refundAddress?, bankInfo? } → PENDING/AWAITING_DEPOSITS
  */
 const createTradeSchema = z.object({
   poolId: z.string().uuid(),
@@ -19,11 +20,16 @@ const createTradeSchema = z.object({
   takerAddress: z.string().optional(),
   // FIAT
   fiatAmount: z.string().optional(), // bigint string
+  // DESK
+  amount: zBigIntStr.optional(),
+  // Common
   bankInfo: z.object({
     bank: z.string(),
     account: z.string(),
     holder: z.string(),
   }).optional(),
+  receiveAddress: z.string().optional(),
+  refundAddress: z.string().optional(),
   counterpartyAddress: z.string().optional(),
 });
 
@@ -129,6 +135,70 @@ export async function POST(req: Request) {
 
       if (error) throw error;
       return Response.json({ id: data.id, status: 'PENDING' });
+    }
+
+    if (pool.kind === 'DESK') {
+      // Check pool status
+      if (pool.status !== 'OPEN' && pool.status !== 'PARTIAL') {
+        throw new AuthError(400, 'Pool is not available');
+      }
+      // Check expiration
+      if (pool.expires_at && new Date(pool.expires_at) <= new Date()) {
+        throw new AuthError(400, 'Pool has expired');
+      }
+
+      const { amount: partialAmount, receiveAddress: takerReceiveAddr, refundAddress: takerRefundAddr, bankInfo: takerBankInfo } = body;
+
+      // Import createDeskTrade
+      const { createDeskTrade } = await import('@/lib/custody/engine');
+
+      // Call engine to create the trade with legs
+      const tradeId = await createDeskTrade({
+        pool: {
+          id: pool.id,
+          kind: pool.kind,
+          trade_type: pool.trade_type,
+          creator_id: pool.creator_id,
+          chain_id: pool.chain_id,
+          offer_asset_id: pool.offer_asset_id,
+          request_asset_id: pool.request_asset_id,
+          fiat_currency: pool.fiat_currency,
+          offer_amount_wei: pool.offer_amount_wei,
+          request_amount_wei: pool.request_amount_wei,
+          allow_partial: pool.allow_partial,
+          deadline: pool.deadline,
+          maker_receive_address: pool.maker_receive_address,
+          maker_refund_address: pool.maker_refund_address,
+          maker_bank_info_enc: pool.maker_bank_info_enc,
+        },
+        taker: { id: user.id },
+        amount: partialAmount,
+        receiveAddress: takerReceiveAddr,
+        refundAddress: takerRefundAddr,
+        bankInfo: takerBankInfo,
+      });
+
+      // Set seller_id/buyer_id for DESK trades
+      // Seller = whoever deposits the offer asset
+      let sellerId = pool.creator_id;
+      let buyerId = user.id;
+      if (pool.trade_type === 'FIAT_CRYPTO') {
+        // Maker offers KRW (not depositing crypto), so taker is seller
+        sellerId = user.id;
+        buyerId = pool.creator_id;
+      }
+
+      await db()
+        .from('trades')
+        .update({
+          seller_id: sellerId,
+          buyer_id: buyerId,
+        })
+        .eq('id', tradeId);
+
+      const { data: trade } = await db().from('trades').select('status').eq('id', tradeId).single();
+
+      return Response.json({ id: tradeId, status: trade?.status || 'PENDING' });
     }
 
     throw new AuthError(400, 'Unknown pool kind');
