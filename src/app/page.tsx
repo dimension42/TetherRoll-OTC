@@ -6,15 +6,36 @@ import Link from 'next/link';
 import StatsBar from '@/components/home/StatsBar';
 import FeatureCards from '@/components/home/FeatureCards';
 import HowItWorks from '@/components/home/HowItWorks';
+import { isChainDeployed } from '@/lib/contracts/addresses';
+import { SUPPORTED_CHAINS } from '@/lib/chains';
 
 const HeroScene = lazy(() => import('@/components/home/HeroScene'));
 
+interface Stats {
+  openPools: number;
+  totalTrades: number;
+  totalUsers: number;
+}
+
 export default function HomePage() {
   const [isClient, setIsClient] = useState(false);
-  useEffect(() => { setIsClient(true); }, []);
+  const [stats, setStats] = useState<Stats | null>(null);
+
+  useEffect(() => {
+    setIsClient(true);
+    // F-06: 실데이터 조회
+    fetch('/api/stats')
+      .then(res => res.json())
+      .then(data => setStats(data))
+      .catch(() => {});
+  }, []);
+
+  // F-06: 배포된 체인만 필터링
+  const deployedChains = SUPPORTED_CHAINS.filter(c => isChainDeployed(c.id));
+  const hasDeployedChains = deployedChains.length > 0;
 
   return (
-    <div className="grid-bg min-h-screen">
+    <div className="grid-bg min-h-screen" style={{ background: '#050806' }}>
       {/* Hero */}
       <section className="relative min-h-screen flex items-center overflow-hidden pt-16">
         <div className="absolute inset-0 pointer-events-none">
@@ -23,7 +44,7 @@ export default function HomePage() {
           </div>
           <div
             className="absolute inset-0"
-            style={{ background: 'radial-gradient(ellipse at 70% 50%, transparent 20%, #080808 70%)' }}
+            style={{ background: 'radial-gradient(ellipse at 70% 50%, transparent 20%, #050806 70%)' }}
           />
         </div>
 
@@ -34,13 +55,15 @@ export default function HomePage() {
             transition={{ duration: 0.8 }}
             className="max-w-2xl"
           >
-            <div
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6"
-              style={{ background: 'rgba(0,201,167,0.1)', border: '1px solid rgba(0,201,167,0.2)', color: '#00c9a7' }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 pulse-dot" />
-              Live on Sepolia Testnet
-            </div>
+            {hasDeployedChains && (
+              <div
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6"
+                style={{ background: 'rgba(0,201,167,0.1)', border: '1px solid rgba(0,201,167,0.2)', color: '#00c9a7' }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 pulse-dot" />
+                On-Chain Escrow · Non-Custodial
+              </div>
+            )}
 
             <h1 className="text-5xl md:text-7xl font-black leading-tight mb-6 text-white">
               Crypto × Fiat<br />
@@ -63,12 +86,12 @@ export default function HomePage() {
 
             <div className="flex flex-wrap gap-8">
               {[
-                { label: '24h Volume', value: '$4.2M' },
-                { label: 'Active Pools', value: '847' },
-                { label: 'Success Rate', value: '99.2%' },
+                { label: 'Open Pools', value: stats ? stats.openPools : '—' },
+                { label: 'Total Trades', value: stats ? stats.totalTrades : '—' },
+                { label: 'Total Users', value: stats ? stats.totalUsers : '—' },
               ].map(s => (
                 <div key={s.label}>
-                  <p className="text-2xl font-bold text-white">{s.value}</p>
+                  <p className="text-2xl font-bold text-white font-mono">{s.value}</p>
                   <p className="text-sm" style={{ color: '#666' }}>{s.label}</p>
                 </div>
               ))}
