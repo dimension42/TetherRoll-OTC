@@ -51,8 +51,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     if (!isParty) throw new AuthError(403, 'Not a party');
 
-    // tx_hash 설정
-    if (!trade.tx_hash && kind === 'take') {
+    // 생성 tx(take / fiat_create)는 PENDING 행에 tx_hash를 먼저 기록해 applyEvent가 이 행을 갱신하도록 한다.
+    // 나머지 kind 는 onchain_trade_id 로 매칭되므로 기록 불필요.
+    if ((kind === 'take' || kind === 'fiat_create') && trade.status === 'PENDING') {
       await db()
         .from('trades')
         .update({ tx_hash: txHash, updated_at: new Date().toISOString() })
@@ -71,25 +72,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return Response.json({ status: 'PENDING' }, { status: 202 });
     }
 
-    // take의 경우, PENDING 행을 갱신 (applyEvent가 신규 생성하지 않도록)
-    if (kind === 'take' && result.status === 'CONFIRMED') {
-      // applyEvent는 이미 호출되었으므로, 여기선 PENDING 행을 찾아 연결만
-      // (실제로는 applyEvent를 수정해서 pendingTradeId 힌트를 받도록 해야 함)
-      // 간단히: tx_hash로 매칭
-      const { data: updatedTrade } = await db()
-        .from('trades')
-        .select('*')
-        .eq('tx_hash', txHash)
-        .eq('chain_id', trade.chain_id)
-        .maybeSingle();
-
-      if (updatedTrade && updatedTrade.id !== id) {
-        // applyEvent가 새 행을 만들었다면, PENDING 행의 내용을 복사하고 새 행 삭제
-        await db().from('trades').delete().eq('id', id);
-      }
-    }
-
-    return Response.json({ status: 'CONFIRMED', event: result.args });
+    const { data: updated } = await db().from('trades').select('id, status, onchain_trade_id').eq('id', id).maybeSingle();
+    return Response.json({ status: 'CONFIRMED', event: result.args, trade: updated ?? null });
   } catch (e) {
     return handleApiError(e);
   }

@@ -121,13 +121,32 @@ async function handlePoolCreated(chainId: number, log: Log, args: {
   const { poolId, maker, offerToken, offerAmount, requestToken, requestAmount, expiresAt, allowPartial, feeBps } = args;
   const makerLower = maker.toLowerCase();
 
-  // create_tx_hash로 기존 DB 행 찾기 (DRAFT/LOCKING 상태)
-  const { data: existing } = await db()
+  // 1) 이미 온체인 id로 반영된 행 (인덱서가 confirm보다 먼저 본 경우 등)
+  const { data: byOnchain } = await db()
     .from('pools')
-    .select('id, creator_id')
+    .select('id, creator_id, status')
+    .eq('chain_id', chainId)
+    .eq('onchain_pool_id', Number(poolId))
+    .maybeSingle();
+
+  // 2) 클라이언트가 confirm 전에 create_tx_hash를 기록해 둔 DRAFT/LOCKING 행
+  const { data: byTx } = await db()
+    .from('pools')
+    .select('id, creator_id, status')
     .eq('chain_id', chainId)
     .eq('create_tx_hash', log.transactionHash!)
+    .in('status', ['DRAFT', 'LOCKING'])
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
+
+  // DRAFT 행이 있고 인덱서가 만든 중복 행도 있으면 → DRAFT 행을 정본으로 삼고 중복 행을 흡수
+  if (byTx && byOnchain && byOnchain.id !== byTx.id) {
+    await db().from('trades').update({ pool_id: byTx.id }).eq('pool_id', byOnchain.id);
+    await db().from('pools').delete().eq('id', byOnchain.id);
+  }
+
+  const existing = byTx ?? byOnchain;
 
   const offerTokenInfo = findToken(chainId, offerToken);
   const requestTokenInfo = findToken(chainId, requestToken);
@@ -217,10 +236,10 @@ async function handlePoolTaken(chainId: number, log: Log, args: {
     .eq('address', takerLower)
     .maybeSingle();
 
-  // trades 행 생성 (SWAP)
-  await db().from('trades').insert({
+  // trades 행: 같은 tx_hash 로 이미 기록된 행(클라 PENDING 행 또는 이전 인덱싱)이 있으면 갱신, 없으면 생성 (멱등)
+  const swapFields = {
     pool_id: pool.id,
-    kind: 'SWAP',
+    kind: 'SWAP' as const,
     chain_id: chainId,
     maker_id: pool.creator_id,
     taker_id: takerUser?.user_id ?? null,
@@ -232,7 +251,22 @@ async function handlePoolTaken(chainId: number, log: Log, args: {
     fee_request_wei: feeRequest.toString(),
     status: 'CONFIRMED' as TradeStatus,
     tx_hash: log.transactionHash!,
-  });
+    updated_at: new Date().toISOString(),
+  };
+  const { data: existingTrade } = await db()
+    .from('trades')
+    .select('id, status')
+    .eq('chain_id', chainId)
+    .eq('tx_hash', log.transactionHash!)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (existingTrade) {
+    if (existingTrade.status === 'CONFIRMED') return; // 이미 반영됨 — 풀 잔량도 갱신 완료 상태
+    await db().from('trades').update(swapFields).eq('id', existingTrade.id);
+  } else {
+    await db().from('trades').insert(swapFields);
+  }
 
   // pools 잔량 차감, status 갱신
   const newStatus: PoolStatus = offerRemaining === BigInt(0) ? 'FILLED' : 'PARTIAL';
@@ -283,7 +317,7 @@ async function handleFiatTradeCreated(chainId: number, log: Log, args: {
   releaseWindow: bigint;
   feeBps: number;
 }) {
-  const { tradeId, seller, buyer, token, amount, bondToken, bondAmount, deadline, releaseWindow, feeBps } = args;
+  const { tradeId, seller, buyer, token, amount, bondToken, bondAmount, deadline, releaseWindow } = args;
   const sellerLower = seller.toLowerCase();
   const buyerLower = buyer.toLowerCase();
 
@@ -292,29 +326,56 @@ async function handleFiatTradeCreated(chainId: number, log: Log, args: {
 
   const status: TradeStatus = bondAmount === BigInt(0) ? 'ACTIVE' : 'AWAITING_BOND';
 
-  await db()
+  const fiatFields = {
+    chain_id: chainId,
+    onchain_trade_id: Number(tradeId),
+    kind: 'FIAT' as const,
+    seller_address: sellerLower,
+    buyer_address: buyerLower,
+    token: token.toLowerCase(),
+    amount_wei: amount.toString(),
+    bond_token: bondToken.toLowerCase(),
+    bond_amount_wei: bondAmount.toString(),
+    deadline: new Date(Number(deadline) * 1000).toISOString(),
+    release_window_sec: Number(releaseWindow),
+    status,
+    tx_hash: log.transactionHash!,
+    updated_at: new Date().toISOString(),
+  };
+
+  // 1) 온체인 id로 이미 반영된 행 → 멱등 갱신
+  const { data: byOnchain } = await db()
     .from('trades')
-    .upsert(
-      {
-        chain_id: chainId,
-        onchain_trade_id: Number(tradeId),
-        kind: 'FIAT',
-        seller_id: sellerUser?.user_id ?? null,
-        buyer_id: buyerUser?.user_id ?? null,
-        seller_address: sellerLower,
-        buyer_address: buyerLower,
-        token: token.toLowerCase(),
-        amount_wei: amount.toString(),
-        bond_token: bondToken.toLowerCase(),
-        bond_amount_wei: bondAmount.toString(),
-        deadline: new Date(Number(deadline) * 1000).toISOString(),
-        release_window_sec: Number(releaseWindow),
-        fee_bps: feeBps,
-        status,
-        tx_hash: log.transactionHash!,
-      },
-      { onConflict: 'chain_id,onchain_trade_id', ignoreDuplicates: false }
-    );
+    .select('id')
+    .eq('chain_id', chainId)
+    .eq('onchain_trade_id', Number(tradeId))
+    .maybeSingle();
+  if (byOnchain) {
+    await db().from('trades').update(fiatFields).eq('id', byOnchain.id);
+    return;
+  }
+
+  // 2) 클라이언트가 confirm 전에 tx_hash를 기록한 PENDING 행 (seller/buyer id, pool_id, bank_info 보존)
+  const { data: byTx } = await db()
+    .from('trades')
+    .select('id')
+    .eq('chain_id', chainId)
+    .eq('tx_hash', log.transactionHash!)
+    .eq('kind', 'FIAT')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (byTx) {
+    await db().from('trades').update(fiatFields).eq('id', byTx.id);
+    return;
+  }
+
+  // 3) 온체인에서 직접 생성된 트레이드 → 신규 행
+  await db().from('trades').insert({
+    ...fiatFields,
+    seller_id: sellerUser?.user_id ?? null,
+    buyer_id: buyerUser?.user_id ?? null,
+  });
 }
 
 /** FiatTradeJoined → trades bond_amount_wei 갱신, status ACTIVE */
