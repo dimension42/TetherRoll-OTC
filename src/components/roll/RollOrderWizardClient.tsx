@@ -25,7 +25,7 @@ export default function RollOrderWizardClient() {
 
   const [side, setSide] = useState<'BUY' | 'SELL'>('BUY');
   const [asset, setAsset] = useState<'USDT' | 'USDC'>('USDT');
-  const [chain, setChain] = useState(ROLL_CHAINS[0].key);
+  const [chain, setChain] = useState<RollChainKey>(ROLL_CHAINS[0].key);
   const [amountKrw, setAmountKrw] = useState('');
   const [quote, setQuote] = useState<QuoteResult | null>(null);
   const [minFillPct, setMinFillPct] = useState(80);
