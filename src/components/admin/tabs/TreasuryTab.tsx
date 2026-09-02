@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiFetch, DataTable, Loading, ErrorMessage, StatusChip, formatDate, Drawer, ConfirmDialog } from '../ui';
+import { apiFetch, DataTable, Loading, ErrorMessage, StatusChip, formatDate, Drawer } from '../ui';
 import { SUPPORTED_CHAINS, CHAIN_META } from '@/lib/chains';
 import { tokensFor } from '@/lib/tokens';
 import { isAddress } from 'viem';

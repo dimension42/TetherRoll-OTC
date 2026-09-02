@@ -13,7 +13,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const { data: existing } = await client.from('announcements').select('*').eq('id', id).maybeSingle();
     if (!existing) return Response.json({ error: 'Announcement not found' }, { status: 404 });
 
-    const update: any = { updated_at: new Date().toISOString() };
+    const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (text !== undefined) update.text = text.trim();
     if (level !== undefined) {
       if (!['info', 'warn', 'danger'].includes(level)) {

@@ -32,7 +32,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     await client.from('onchain_txs').insert({
       user_id: admin.id,
-      chain_id: (dispute.trade as any).chain_id,
+      chain_id: (dispute.trade as { chain_id: number }).chain_id,
       hash: txHash.trim(),
       kind: 'fiat_resolve',
       ref_type: 'dispute',

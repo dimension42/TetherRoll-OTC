@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { apiFetch, DataTable, Loading, ErrorMessage, StatusChip, formatDate } from '../ui';
+import { useContractAdmin } from '../hooks/useContractAdmin';
+import { useAccount } from 'wagmi';
 
 interface Pool {
   id: string;
@@ -13,12 +15,16 @@ interface Pool {
   offer_amount: string;
   created_at: string;
   creator_id: string;
+  chain_id: number;
+  onchain_pool_id: bigint | null;
+  expires_at: string | null;
 }
 
 export default function PoolsTab() {
   const [pools, setPools] = useState<Pool[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  useAccount();
 
   const loadPools = async () => {
     setLoading(true);
@@ -69,17 +75,27 @@ export default function PoolsTab() {
           {
             key: 'actions',
             label: 'Actions',
-            render: p => (
-              p.status !== 'HIDDEN' ? (
-                <button
-                  onClick={() => handleHide(p.id)}
-                  className="px-3 py-1 rounded text-xs font-bold"
-                  style={{ background: '#FF4D5E40', color: '#FF4D5E', border: '1px solid #FF4D5E' }}
-                >
-                  Hide
-                </button>
-              ) : <span style={{ color: '#8FA398' }}>—</span>
-            ),
+            render: p => {
+              const isExpired = p.expires_at && new Date(p.expires_at) < new Date();
+              const canExpire = (p.status === 'OPEN' || p.status === 'PARTIAL') && isExpired && p.onchain_pool_id && p.chain_id;
+
+              return (
+                <div className="flex gap-2">
+                  {p.status !== 'HIDDEN' && (
+                    <button
+                      onClick={() => handleHide(p.id)}
+                      className="px-3 py-1 rounded text-xs font-bold"
+                      style={{ background: '#FF4D5E40', color: '#FF4D5E', border: '1px solid #FF4D5E' }}
+                    >
+                      Hide
+                    </button>
+                  )}
+                  {canExpire && (
+                    <ExpireButton poolId={p.id} onchainPoolId={p.onchain_pool_id!} chainId={p.chain_id} onSuccess={loadPools} />
+                  )}
+                </div>
+              );
+            },
           },
         ]}
         data={pools}
@@ -87,5 +103,57 @@ export default function PoolsTab() {
         emptyText="No pools"
       />
     </div>
+  );
+}
+
+function ExpireButton({ poolId, onchainPoolId, chainId, onSuccess }: { poolId: string; onchainPoolId: bigint; chainId: number; onSuccess: () => void }) {
+  const contract = useContractAdmin(chainId);
+  const [confirming, setConfirming] = useState(false);
+
+  const handleExpire = async () => {
+    if (!confirm('Expire this pool on-chain?')) return;
+    try {
+      contract.expire(BigInt(onchainPoolId));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Transaction failed');
+    }
+  };
+
+  useEffect(() => {
+    if (contract.isConfirmed && contract.txHash && confirming) {
+      // Try to call WS2's confirm endpoint
+      fetch(`/api/pools/${poolId}/close-confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ txHash: contract.txHash }),
+      })
+        .then(() => {
+          setConfirming(false);
+          onSuccess();
+        })
+        .catch(() => {
+          // If 404, just show the hash
+          alert(`Pool expired on-chain. TX: ${contract.txHash}\n\nNote: /api/pools/${poolId}/close-confirm returned error (WS2 route may not exist yet).`);
+          setConfirming(false);
+          onSuccess();
+        });
+    }
+  }, [contract.isConfirmed, contract.txHash, poolId, confirming, onSuccess]);
+
+  useEffect(() => {
+    if (contract.isPending || contract.isConfirming) {
+      setConfirming(true);
+    }
+  }, [contract.isPending, contract.isConfirming]);
+
+  return (
+    <button
+      onClick={handleExpire}
+      disabled={contract.isPending || contract.isConfirming}
+      className="px-3 py-1 rounded text-xs font-bold"
+      style={{ background: '#FFB02040', color: '#FFB020', border: '1px solid #FFB020', opacity: contract.isPending || contract.isConfirming ? 0.5 : 1 }}
+    >
+      {contract.isPending ? 'Confirm...' : contract.isConfirming ? 'Expiring...' : 'Expire On-Chain'}
+    </button>
   );
 }
