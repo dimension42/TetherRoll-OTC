@@ -6,6 +6,8 @@ import { parseBody } from '@/lib/roll/http';
 import { db } from '@/lib/db';
 import { notifyDepositConfirmed } from '@/lib/roll/notify';
 
+export const dynamic = 'force-dynamic';
+
 const schema = z.object({
   amountKrw: z.number().positive(),
   depositorName: z.string().min(1),

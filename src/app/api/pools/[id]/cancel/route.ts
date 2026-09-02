@@ -1,6 +1,8 @@
 import { requireUser, handleApiError, AuthError } from '@/lib/auth/guards';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/pools/[id]/cancel — DRAFT 상태 풀만 취소 (DB 마킹).
  * 온체인 락 이후엔 409 응답.

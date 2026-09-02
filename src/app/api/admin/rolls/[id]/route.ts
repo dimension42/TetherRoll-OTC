@@ -3,6 +3,8 @@ import { handleApiError, AuthError } from '@/lib/auth/guards';
 import { requireRole } from '@/lib/auth/adminRoles';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
     await requireRole('ops');

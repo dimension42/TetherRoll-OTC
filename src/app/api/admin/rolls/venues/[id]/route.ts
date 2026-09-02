@@ -5,6 +5,8 @@ import { requireRole } from '@/lib/auth/adminRoles';
 import { parseBody } from '@/lib/roll/http';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 const schema = z.object({
   enabled: z.boolean().optional(),
   feeOverrideBps: z.number().int().min(0).max(1000).nullable().optional(),

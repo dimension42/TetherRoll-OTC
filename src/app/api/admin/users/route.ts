@@ -2,6 +2,8 @@ import { db } from '@/lib/db';
 import { requireRole } from '@/lib/auth/adminRoles';
 import { auditLog, handleApiError } from '@/lib/auth/guards';
 
+export const dynamic = 'force-dynamic';
+
 /** GET /api/admin/users?q=... — 유저 검색 (B-02 수정: 안전한 검색) */
 export async function GET(req: Request) {
   try {

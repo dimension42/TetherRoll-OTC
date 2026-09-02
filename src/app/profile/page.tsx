@@ -5,7 +5,6 @@ import { useAccount } from 'wagmi';
 import { useAuth } from '@/hooks/useAuth';
 import { shortAddr } from '@/lib/format';
 import { StatusChip } from '@/components/ui/StatusChip';
-import { AddressLink } from '@/components/ui/AddressLink';
 import Link from 'next/link';
 
 interface Wallet {

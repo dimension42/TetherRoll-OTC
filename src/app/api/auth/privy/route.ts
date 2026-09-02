@@ -3,6 +3,8 @@ import { upsertUserByPrivy, assertNotBanned } from '@/lib/auth/link';
 import { handleApiError } from '@/lib/auth/guards';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/auth/privy — { token } (Privy access token)
  * Privy 소셜 로그인 후 클라이언트가 access token을 보내면 서버에서 검증하고 세션 발급.

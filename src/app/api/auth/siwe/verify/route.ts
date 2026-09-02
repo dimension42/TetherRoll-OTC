@@ -8,6 +8,8 @@ import { db } from '@/lib/db';
 import { rateLimitByIp } from '@/lib/ratelimit';
 import { isSupportedChain } from '@/lib/chains';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/auth/siwe/verify — { message, signature }
  * B-03: domain, uri origin, expirationTime/notBefore, chainId 검증 추가.

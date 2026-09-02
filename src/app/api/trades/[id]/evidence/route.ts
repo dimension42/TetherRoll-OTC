@@ -2,6 +2,8 @@ import { requireUser, handleApiError, AuthError } from '@/lib/auth/guards';
 import { db } from '@/lib/db';
 import { createHash } from 'crypto';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/trades/[id]/evidence — 분쟁 증거 파일 업로드.
  * multipart/form-data, file ≤10MB, image/pdf → Storage 'evidence' bucket.

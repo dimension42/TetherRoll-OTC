@@ -4,6 +4,8 @@ import { parseBody, zChainId } from '@/lib/validate';
 import { rateLimitByUser } from '@/lib/ratelimit';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/tx — 온체인 tx 기록 (PENDING).
  */

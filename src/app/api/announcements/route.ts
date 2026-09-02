@@ -1,6 +1,8 @@
 import { handleApiError } from '@/lib/auth/guards';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/announcements — 공개 API.
  * { announcement: { text, level } | null, tradingPaused: boolean }

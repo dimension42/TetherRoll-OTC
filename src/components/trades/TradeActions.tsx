@@ -59,7 +59,7 @@ export function TradeActions({
   const [currentAction, setCurrentAction] = useState<string>('');
 
   const requiredAddress = isSeller ? trade.seller_address : trade.buyer_address;
-  const isWalletCorrect = userAddress?.toLowerCase() === requiredAddress.toLowerCase();
+  const isWalletCorrect = requiredAddress && userAddress?.toLowerCase() === requiredAddress.toLowerCase();
   const isChainCorrect = chain?.id === trade.chain_id;
 
   // Amounts for approval
@@ -181,7 +181,7 @@ export function TradeActions({
   };
 
   const executeCreate = () => {
-    if (!vaultAddress) return;
+    if (!vaultAddress || !trade.buyer_address || !trade.token || !trade.bond_token) return;
 
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 86400); // 24h
     const releaseWindow = BigInt(86400); // 24h
@@ -235,7 +235,7 @@ export function TradeActions({
   };
 
   const executeJoin = () => {
-    if (!vaultAddress || !trade.onchain_trade_id) return;
+    if (!vaultAddress || !trade.onchain_trade_id || !trade.bond_token) return;
 
     const isNativeBond = isNative(trade.bond_token);
     const value = isNativeBond ? joinAmount : BigInt(0);
@@ -333,14 +333,14 @@ export function TradeActions({
 
   // Check deadlines
   const now = Math.floor(Date.now() / 1000);
-  const deadlineTimestamp = new Date(trade.deadline).getTime();
-  const isPastDeadline = now >= deadlineTimestamp / 1000;
-  const releaseWindowEnd = trade.paid_at
+  const deadlineTimestamp = trade.deadline ? new Date(trade.deadline).getTime() : 0;
+  const isPastDeadline = deadlineTimestamp > 0 && now >= deadlineTimestamp / 1000;
+  const releaseWindowEnd = trade.paid_at && trade.release_window_sec
     ? new Date(trade.paid_at).getTime() / 1000 + trade.release_window_sec
     : 0;
-  const isPastReleaseWindow = trade.paid_at && now >= releaseWindowEnd;
+  const isPastReleaseWindow = trade.paid_at && trade.release_window_sec && now >= releaseWindowEnd;
 
-  if (!isWalletCorrect) {
+  if (!isWalletCorrect && requiredAddress) {
     return (
       <div className="p-6 rounded-2xl" style={{ background: '#111', border: '1px solid #1f1f1f' }}>
         <p className="text-center" style={{ color: '#f5a623' }}>
@@ -509,7 +509,7 @@ export function TradeActions({
           )}
 
           {/* Deadline countdown */}
-          {!isPastDeadline && (effectiveStatus === 'AWAITING_BOND' || effectiveStatus === 'ACTIVE') && (
+          {!isPastDeadline && (effectiveStatus === 'AWAITING_BOND' || effectiveStatus === 'ACTIVE') && trade.deadline && (
             <div className="p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
               <p className="text-xs mb-1" style={{ color: '#666' }}>Time remaining:</p>
               <p className="font-mono font-semibold">
@@ -569,7 +569,7 @@ export function TradeActions({
         isOpen={disputeModalOpen}
         onClose={() => setDisputeModalOpen(false)}
         tradeId={trade.id}
-        onchainTradeId={trade.onchain_trade_id}
+        onchainTradeId={trade.onchain_trade_id ?? null}
         onUpdate={onUpdate}
       />
 

@@ -5,6 +5,8 @@ import { parseBody, rateLimit } from '@/lib/roll/http';
 import { generateQuote } from '@/lib/roll/quote';
 import { ROLL_CHAINS } from '@/lib/tokens';
 
+export const dynamic = 'force-dynamic';
+
 const schema = z.object({
   side: z.enum(['BUY', 'SELL']),
   asset: z.enum(['USDT', 'USDC']),

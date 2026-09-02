@@ -3,6 +3,8 @@ import { createSession } from '@/lib/auth/session';
 import { upsertUserByEmail, assertNotBanned } from '@/lib/auth/link';
 import { handleApiError } from '@/lib/auth/guards';
 
+export const dynamic = 'force-dynamic';
+
 /** POST /api/auth/email — { mode: 'login' | 'signup', email, password } */
 export async function POST(req: Request) {
   try {

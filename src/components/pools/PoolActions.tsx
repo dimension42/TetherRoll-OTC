@@ -20,7 +20,7 @@ export function PoolActions({ pool, onSuccess }: { pool: Pool; onSuccess: () => 
   const [txSteps, setTxSteps] = useState<Array<{ label: string; status: 'pending' | 'active' | 'success' | 'error'; txHash?: string; chainId?: number; error?: string }>>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const isOwner = user?.id === pool.creator_id || userAddress?.toLowerCase() === pool.maker_address.toLowerCase();
+  const isOwner = user?.id === pool.creator_id || (userAddress && pool.maker_address && userAddress.toLowerCase() === pool.maker_address.toLowerCase());
   const isExpired = pool.expires_at ? new Date(pool.expires_at) <= new Date() : false;
   const canCancel = isOwner && (pool.status === 'OPEN' || pool.status === 'PARTIAL');
   const canExpire = isExpired && (pool.status === 'OPEN' || pool.status === 'PARTIAL');

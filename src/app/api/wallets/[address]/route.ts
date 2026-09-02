@@ -1,6 +1,8 @@
 import { requireUser, handleApiError, AuthError } from '@/lib/auth/guards';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * DELETE /api/wallets/[address] — 지갑 연결 해제.
  * 마지막 지갑이면 불가 (최소 1개 유지).

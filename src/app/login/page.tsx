@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAccount, useConnect, useSignMessage, useChainId } from 'wagmi';
 import { createSiweMessage } from 'viem/siwe';
@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { refresh } = useAuth();
@@ -225,5 +225,13 @@ function SocialLogin({ onDone, busy, setBusy, setError }: {
     >
       {busy === 'social' ? 'Signing in…' : 'Continue with Google / X / Telegram'}
     </button>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
   );
 }

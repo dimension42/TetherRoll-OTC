@@ -1,17 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { StatusChip } from '@/components/ui/StatusChip';
 import Link from 'next/link';
 
 type Tab = 'pools' | 'taker' | 'fiat' | 'history';
 
 export default function TradesPage() {
-  const { user, authenticated, ready, login } = useAuth();
+  const { authenticated, ready, login } = useAuth();
   const [tab, setTab] = useState<Tab>('pools');
-  const [loading, setLoading] = useState(false);
 
   if (!ready) {
     return (

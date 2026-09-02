@@ -1,6 +1,8 @@
 import { generateSiweNonce } from 'viem/siwe';
 import { cookies } from 'next/headers';
 
+export const dynamic = 'force-dynamic';
+
 /** GET /api/auth/siwe/nonce — SIWE nonce 발급 (5분 유효, httpOnly) */
 export async function GET() {
   const nonce = generateSiweNonce();

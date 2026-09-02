@@ -2,6 +2,8 @@ import { db } from '@/lib/db';
 import { requireRole } from '@/lib/auth/adminRoles';
 import { handleApiError } from '@/lib/auth/guards';
 
+export const dynamic = 'force-dynamic';
+
 /** GET /api/admin/vip-requests — all requests */
 export async function GET() {
   try {

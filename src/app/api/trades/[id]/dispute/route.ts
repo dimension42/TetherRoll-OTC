@@ -3,6 +3,8 @@ import { requireUser, handleApiError, AuthError } from '@/lib/auth/guards';
 import { parseBody } from '@/lib/validate';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/trades/[id]/dispute — 분쟁 제기 (DB disputes 행 생성).
  * 온체인 raiseDispute()는 클라가 전송 후 /confirm.

@@ -1,6 +1,8 @@
 import { AuthError, handleApiError } from '@/lib/auth/guards';
 import { runIndexer } from '@/lib/onchain/indexer';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/cron/indexer — Vercel cron (1분마다).
  * CRON_SECRET 헤더 검증 → 모든 체인 인덱싱.

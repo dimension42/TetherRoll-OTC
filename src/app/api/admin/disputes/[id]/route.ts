@@ -2,6 +2,8 @@ import { db } from '@/lib/db';
 import { requireRole } from '@/lib/auth/adminRoles';
 import { auditLog, handleApiError } from '@/lib/auth/guards';
 
+export const dynamic = 'force-dynamic';
+
 /** GET /api/admin/disputes/[id] — detail with evidence signed URLs */
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {

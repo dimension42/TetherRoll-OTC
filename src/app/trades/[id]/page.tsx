@@ -136,7 +136,7 @@ export default function TradeDetailPage() {
           </div>
 
           {/* Bank Info (buyer only, in active states) */}
-          {isBuyer && bankInfo && ['ACTIVE', 'PAID'].includes(effectiveStatus || trade.status) && (
+          {isBuyer && bankInfo && ['ACTIVE', 'PAID'].includes(effectiveStatus || trade.status) && trade.fiat_amount && (
             <BankInfoCard bankInfo={bankInfo} fiatAmount={trade.fiat_amount} />
           )}
 

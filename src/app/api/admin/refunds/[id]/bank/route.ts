@@ -4,6 +4,8 @@ import { requireRole } from '@/lib/auth/adminRoles';
 import { db } from '@/lib/db';
 import { decrypt } from '@/lib/roll/crypto';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
     const admin = await requireRole('ops');

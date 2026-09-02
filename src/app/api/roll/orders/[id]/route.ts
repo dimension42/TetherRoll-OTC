@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { requireVip, handleApiError, AuthError } from '@/lib/auth/guards';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
     const user = await requireVip();

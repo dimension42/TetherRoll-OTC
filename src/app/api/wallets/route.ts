@@ -5,6 +5,8 @@ import { db } from '@/lib/db';
 import { parseSiweMessage, verifySiweMessage } from 'viem/siwe';
 import { publicClientFor } from '@/lib/onchain/client';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/wallets — 내 지갑 목록
  */

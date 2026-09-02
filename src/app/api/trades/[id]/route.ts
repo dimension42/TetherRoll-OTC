@@ -2,6 +2,8 @@ import { requireUser, handleApiError, AuthError } from '@/lib/auth/guards';
 import { db } from '@/lib/db';
 import { decryptJson } from '@/lib/crypto';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/trades/[id] — 거래 상세 (당사자만).
  * 판매자 bank_info는 구매자에게만, 그리고 status가 PENDING/AWAITING_BOND/ACTIVE/PAID일 때만 복호화.

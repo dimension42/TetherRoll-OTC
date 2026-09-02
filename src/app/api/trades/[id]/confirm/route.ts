@@ -5,6 +5,8 @@ import { rateLimitByUser } from '@/lib/ratelimit';
 import { db } from '@/lib/db';
 import { confirmTx } from '@/lib/onchain/confirm';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/trades/[id]/confirm — 트레이드 tx 확인.
  * kind: take | fiat_create | fiat_join | fiat_paid | fiat_release | fiat_cancel | fiat_expire | fiat_dispute | fiat_resolve

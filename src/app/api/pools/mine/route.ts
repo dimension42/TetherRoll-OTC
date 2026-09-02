@@ -1,6 +1,8 @@
 import { requireUser, handleApiError } from '@/lib/auth/guards';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/pools/mine — 내가 만든 풀 + 내가 참여한 풀 (trades 통해).
  */

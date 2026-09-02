@@ -4,6 +4,8 @@ import { handleApiError } from '@/lib/auth/guards';
 import { formatUnits } from 'viem';
 import { findToken } from '@/lib/tokens';
 
+export const dynamic = 'force-dynamic';
+
 /** GET /api/admin/stats — 대시보드 KPI (PRD §4.1) */
 export async function GET() {
   try {

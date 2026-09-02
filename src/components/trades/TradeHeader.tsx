@@ -16,8 +16,8 @@ export function TradeHeader({
   isBuyer: boolean;
   chainMeta: { name: string; short: string };
 }) {
-  const token = findToken(trade.chain_id, trade.token);
-  const bondToken = findToken(trade.chain_id, trade.bond_token);
+  const token = findToken(trade.chain_id, trade.token ?? '');
+  const bondToken = findToken(trade.chain_id, trade.bond_token ?? '');
 
   return (
     <div className="p-6 rounded-2xl" style={{ background: '#0F1712', border: '1px solid #1f1f1f' }}>
@@ -50,10 +50,12 @@ export function TradeHeader({
           <p className="text-xs uppercase mb-2" style={{ color: '#666' }}>
             {isSeller ? 'Buyer' : 'Seller'}
           </p>
-          <AddressLink
-            address={isSeller ? trade.buyer_address : trade.seller_address}
-            chainId={trade.chain_id}
-          />
+          {(isSeller ? trade.buyer_address : trade.seller_address) && (
+            <AddressLink
+              address={(isSeller ? trade.buyer_address : trade.seller_address)!}
+              chainId={trade.chain_id}
+            />
+          )}
         </div>
 
         {/* Crypto Amount */}
@@ -75,7 +77,7 @@ export function TradeHeader({
             KRW Amount
           </p>
           <p className="text-lg font-mono font-semibold" style={{ color: '#00c9a7' }}>
-            {fmtKrw(trade.fiat_amount)}
+            {trade.fiat_amount ? fmtKrw(trade.fiat_amount) : '—'}
           </p>
         </div>
 

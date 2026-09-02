@@ -74,8 +74,8 @@ export default function PoolsPage() {
   // 클라이언트 심볼 검색
   const filtered = symbolSearch
     ? pools.filter(p =>
-        p.offer_symbol.toLowerCase().includes(symbolSearch.toLowerCase()) ||
-        p.request_symbol.toLowerCase().includes(symbolSearch.toLowerCase()) ||
+        p.offer_symbol?.toLowerCase().includes(symbolSearch.toLowerCase()) ||
+        p.request_symbol?.toLowerCase().includes(symbolSearch.toLowerCase()) ||
         p.fiat_currency?.toLowerCase().includes(symbolSearch.toLowerCase())
       )
     : pools;

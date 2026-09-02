@@ -5,6 +5,8 @@ import { parseBody } from '@/lib/roll/http';
 import { encrypt } from '@/lib/roll/crypto';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 const schema = z.object({
   bank: z.string().min(1),
   account: z.string().min(1),

@@ -3,6 +3,8 @@ import { requireUser, handleApiError, AuthError } from '@/lib/auth/guards';
 import { parseBody } from '@/lib/validate';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/trades/[id]/paid — FIAT 구매자가 "송금함" 표시 (DB 마커).
  */

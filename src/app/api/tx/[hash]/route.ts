@@ -4,6 +4,8 @@ import { parseQuery, zChainId } from '@/lib/validate';
 import { db } from '@/lib/db';
 import { publicClientFor } from '@/lib/onchain/client';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/tx/[hash]?chainId= — tx 조회 + live receipt 상태.
  */

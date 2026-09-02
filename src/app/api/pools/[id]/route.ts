@@ -5,6 +5,8 @@ import { rateLimitByUser } from '@/lib/ratelimit';
 import { db } from '@/lib/db';
 import { confirmTx } from '@/lib/onchain/confirm';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/pools/[id] — 풀 상세 + trades (내가 당사자인 것).
  * VIP 풀은 requireVip().

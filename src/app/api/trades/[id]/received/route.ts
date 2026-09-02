@@ -1,6 +1,8 @@
 import { requireUser, handleApiError, AuthError } from '@/lib/auth/guards';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/trades/[id]/received — FIAT 판매자가 "수령함" 표시 (DB 마커).
  * 실제 릴리즈는 온체인 confirmReceived() 전송 후 confirm 엔드포인트.

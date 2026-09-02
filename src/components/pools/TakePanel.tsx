@@ -29,15 +29,15 @@ export function TakePanel({ pool }: { pool: Pool; onSuccess?: () => void }) {
   const [tradingPaused, setTradingPaused] = useState(false);
 
   // 토큰 정보
-  const offerToken = findToken(pool.chain_id, pool.offer_token);
-  const requestToken = findToken(pool.chain_id, pool.request_token);
+  const offerToken = pool.offer_token ? findToken(pool.chain_id, pool.offer_token) : null;
+  const requestToken = pool.request_token ? findToken(pool.chain_id, pool.request_token) : null;
   const vaultAddress = escrowVaultAddress(pool.chain_id);
 
   // 수량 파싱
   const offerWanted = amount && offerToken ? parseUnits(amount, offerToken.decimals) : null;
 
   // quoteTake 조회
-  const { quote } = useQuoteTake(pool.onchain_pool_id, offerWanted);
+  const { quote } = useQuoteTake(pool.onchain_pool_id ?? null, offerWanted);
 
   // Approval
   const { needsApproval, approve, isApproving, isSuccess: isApproveSuccess } = useTokenApproval(
@@ -142,7 +142,7 @@ export function TakePanel({ pool }: { pool: Pool; onSuccess?: () => void }) {
 
   const handleMax = () => {
     if (pool.offer_remaining_wei) {
-      setAmount(fmtAmount(pool.offer_remaining_wei, pool.offer_decimals));
+      setAmount(fmtAmount(pool.offer_remaining_wei, pool.offer_decimals ?? 18));
     }
   };
 
@@ -224,7 +224,7 @@ export function TakePanel({ pool }: { pool: Pool; onSuccess?: () => void }) {
   // 버튼 비활성화 이유
   const wrongChain = chain?.id !== pool.chain_id;
   const notConnected = !userAddress;
-  const ownPool = userAddress?.toLowerCase() === pool.maker_address.toLowerCase();
+  const ownPool = userAddress && pool.maker_address && userAddress.toLowerCase() === pool.maker_address.toLowerCase();
   const notOpen = pool.status !== 'OPEN' && pool.status !== 'PARTIAL';
   const isExpired = pool.expires_at ? new Date(pool.expires_at) <= new Date() : false;
   const amountZero = !amount || parseFloat(amount) <= 0;
@@ -244,6 +244,16 @@ export function TakePanel({ pool }: { pool: Pool; onSuccess?: () => void }) {
   else if (noPartial) disableReason = 'Partial fill not allowed';
 
   const disabled = !!disableReason || isPending || isApproving || isConfirming;
+
+  // Guard for pools not locked on-chain
+  if (pool.onchain_pool_id == null || !pool.offer_token || !pool.request_token) {
+    return (
+      <div className="p-6 rounded-2xl" style={{ background: '#0F1712', border: '1px solid #1f1f1f' }}>
+        <h3 className="text-xl font-bold text-white mb-4">Take This Pool</h3>
+        <p className="text-sm" style={{ color: '#8FA398' }}>This pool is not locked on-chain yet.</p>
+      </div>
+    );
+  }
 
   return (
     <ChainGuard>
@@ -266,13 +276,13 @@ export function TakePanel({ pool }: { pool: Pool; onSuccess?: () => void }) {
                   className="text-xs font-semibold"
                   style={{ color: '#00c9a7', cursor: 'pointer' }}
                 >
-                  MAX: {pool.offer_remaining_wei ? fmtAmount(pool.offer_remaining_wei, pool.offer_decimals) : '0'}
+                  MAX: {pool.offer_remaining_wei ? fmtAmount(pool.offer_remaining_wei, pool.offer_decimals ?? 18) : '0'}
                 </button>
               </div>
               <AmountInput
                 value={amount}
                 onChange={setAmount}
-                decimals={pool.offer_decimals}
+                decimals={pool.offer_decimals ?? 18}
                 placeholder="0.0"
               />
             </div>
@@ -283,25 +293,25 @@ export function TakePanel({ pool }: { pool: Pool; onSuccess?: () => void }) {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm" style={{ color: '#888' }}>You pay</span>
                   <span className="text-sm font-mono font-semibold text-white">
-                    {fmtAmount(quote.requestDue, pool.request_decimals)} {requestToken?.symbol}
+                    {fmtAmount(quote.requestDue, pool.request_decimals ?? 18)} {requestToken?.symbol}
                   </span>
                 </div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm" style={{ color: '#888' }}>Platform fee (offer)</span>
                   <span className="text-sm font-mono" style={{ color: '#888' }}>
-                    {fmtAmount(quote.feeOffer, pool.offer_decimals)} {offerToken?.symbol}
+                    {fmtAmount(quote.feeOffer, pool.offer_decimals ?? 18)} {offerToken?.symbol}
                   </span>
                 </div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm" style={{ color: '#888' }}>Platform fee (request)</span>
                   <span className="text-sm font-mono" style={{ color: '#888' }}>
-                    {fmtAmount(quote.feeRequest, pool.request_decimals)} {requestToken?.symbol}
+                    {fmtAmount(quote.feeRequest, pool.request_decimals ?? 18)} {requestToken?.symbol}
                   </span>
                 </div>
                 <div className="flex justify-between items-center pt-2" style={{ borderTop: '1px solid #2a2a2a' }}>
                   <span className="text-sm font-semibold" style={{ color: '#00ff88' }}>You receive</span>
                   <span className="text-sm font-mono font-semibold" style={{ color: '#00ff88' }}>
-                    {fmtAmount(offerWanted! - quote.feeOffer, pool.offer_decimals)} {offerToken?.symbol}
+                    {fmtAmount(offerWanted! - quote.feeOffer, pool.offer_decimals ?? 18)} {offerToken?.symbol}
                   </span>
                 </div>
               </div>

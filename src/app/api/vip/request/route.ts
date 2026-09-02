@@ -1,6 +1,8 @@
 import { db } from '@/lib/db';
 import { requireUser, handleApiError } from '@/lib/auth/guards';
 
+export const dynamic = 'force-dynamic';
+
 const COOLDOWN_DAYS = 7;
 
 /** POST /api/vip/request — { reason, expectedVolume?, contact? } */

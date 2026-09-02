@@ -2,6 +2,8 @@ import { db } from '@/lib/db';
 import { requireRole } from '@/lib/auth/adminRoles';
 import { auditLog, handleApiError } from '@/lib/auth/guards';
 
+export const dynamic = 'force-dynamic';
+
 /** GET /api/admin/settings — kill_switch + announcements */
 export async function GET() {
   try {

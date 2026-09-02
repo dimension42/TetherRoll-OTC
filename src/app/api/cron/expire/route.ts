@@ -1,6 +1,8 @@
 import { AuthError, handleApiError } from '@/lib/auth/guards';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/cron/expire — Vercel cron (5분마다).
  * 만료된 pools/trades/roll_orders를 EXPIRED로 마킹.

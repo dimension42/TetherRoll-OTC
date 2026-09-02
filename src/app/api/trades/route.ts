@@ -5,6 +5,8 @@ import { rateLimitByUser } from '@/lib/ratelimit';
 import { db } from '@/lib/db';
 import { encryptJson } from '@/lib/crypto';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/trades — 거래 생성 (SWAP 또는 FIAT).
  * SWAP: { poolId, offerWanted, takerAddress? } → PENDING (클라가 take() 전송)

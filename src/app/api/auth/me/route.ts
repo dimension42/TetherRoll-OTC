@@ -1,6 +1,8 @@
 import { getSessionUser } from '@/lib/auth/guards';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 function isEnvAdmin(email: string | null): boolean {
   if (!email) return false;
   return (process.env.ADMIN_EMAILS || '')

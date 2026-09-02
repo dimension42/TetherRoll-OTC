@@ -1,6 +1,8 @@
 import { db } from '@/lib/db';
 import { handleApiError } from '@/lib/auth/guards';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/stats — 공개 집계 (랜딩 화면용).
  * 익명 유저에게도 안전한 집계 수치만 노출.

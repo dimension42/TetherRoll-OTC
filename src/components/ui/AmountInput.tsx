@@ -9,7 +9,7 @@ export function AmountInput({
   value,
   onChange,
   balance,
-  decimals = 18,
+  decimals: _decimals = 18,
   symbol,
   placeholder = '0.0',
   disabled = false,

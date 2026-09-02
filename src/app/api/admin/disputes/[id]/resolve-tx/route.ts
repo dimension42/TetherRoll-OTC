@@ -2,6 +2,8 @@ import { db } from '@/lib/db';
 import { requireRole } from '@/lib/auth/adminRoles';
 import { auditLog, handleApiError } from '@/lib/auth/guards';
 
+export const dynamic = 'force-dynamic';
+
 /** POST /api/admin/disputes/[id]/resolve-tx — { txHash } */
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {

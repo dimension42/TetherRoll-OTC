@@ -17,23 +17,23 @@ export default function PoolCard({ pool, index }: { pool: Pool; index: number })
 
   // FIAT 풀: 표시 금액 포맷 (KRW는 fmtKrw 대신 toLocaleString)
   const offerDisplay = isFiat && pool.trade_type === 'FIAT_CRYPTO'
-    ? `₩${parseFloat(pool.offer_amount).toLocaleString('ko-KR')}`
-    : fmtAmount(pool.offer_amount_wei, pool.offer_decimals);
+    ? `₩${parseFloat(String(pool.offer_amount ?? '0')).toLocaleString('ko-KR')}`
+    : fmtAmount(pool.offer_amount_wei ?? '0', pool.offer_decimals ?? 18);
 
   const requestDisplay = isFiat && pool.trade_type === 'CRYPTO_FIAT'
-    ? `₩${parseFloat(pool.request_amount).toLocaleString('ko-KR')}`
-    : fmtAmount(pool.request_amount_wei, pool.request_decimals);
+    ? `₩${parseFloat(String(pool.request_amount ?? '0')).toLocaleString('ko-KR')}`
+    : fmtAmount(pool.request_amount_wei ?? '0', pool.request_decimals ?? 18);
 
   const offerSymbol = isFiat && pool.trade_type === 'FIAT_CRYPTO' ? pool.fiat_currency : pool.offer_symbol;
   const requestSymbol = isFiat && pool.trade_type === 'CRYPTO_FIAT' ? pool.fiat_currency : pool.request_symbol;
 
   // 남은 비율 계산
-  const remainingPct = pool.onchain_pool_id !== null
+  const remainingPct = pool.onchain_pool_id !== null && pool.offer_remaining_wei && pool.offer_amount_wei
     ? Math.floor((parseFloat(pool.offer_remaining_wei) / parseFloat(pool.offer_amount_wei)) * 100)
     : 100;
 
   // 가격 (request per 1 offer)
-  const price = parseFloat(pool.request_amount) / parseFloat(pool.offer_amount);
+  const price = parseFloat(String(pool.request_amount ?? '1')) / parseFloat(String(pool.offer_amount ?? '1'));
   const priceStr = price.toLocaleString('en-US', { maximumFractionDigits: 6 });
 
   return (
@@ -140,7 +140,7 @@ export default function PoolCard({ pool, index }: { pool: Pool; index: number })
           {/* Footer: 만료 */}
           <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: '1px solid #1a1a1a' }}>
             <span className="text-xs" style={{ color: '#555' }}>
-              Fee: <span className="font-mono" style={{ color: '#888' }}>{(pool.fee_bps / 100).toFixed(2)}%</span>
+              Fee: <span className="font-mono" style={{ color: '#888' }}>{((pool.fee_bps ?? 0) / 100).toFixed(2)}%</span>
             </span>
             {pool.expires_at && (
               <div className="text-xs font-semibold">

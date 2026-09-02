@@ -101,12 +101,12 @@ export default function PoolDetailPage() {
 
   // FIAT 금액 포맷
   const offerDisplay = isFiat && pool.trade_type === 'FIAT_CRYPTO'
-    ? `₩${parseFloat(pool.offer_amount).toLocaleString('ko-KR')}`
-    : fmtAmount(pool.offer_amount_wei, pool.offer_decimals);
+    ? `₩${parseFloat(String(pool.offer_amount ?? '0')).toLocaleString('ko-KR')}`
+    : fmtAmount(pool.offer_amount_wei ?? '0', pool.offer_decimals ?? 18);
 
   const requestDisplay = isFiat && pool.trade_type === 'CRYPTO_FIAT'
-    ? `₩${parseFloat(pool.request_amount).toLocaleString('ko-KR')}`
-    : fmtAmount(pool.request_amount_wei, pool.request_decimals);
+    ? `₩${parseFloat(String(pool.request_amount ?? '0')).toLocaleString('ko-KR')}`
+    : fmtAmount(pool.request_amount_wei ?? '0', pool.request_decimals ?? 18);
 
   const offerSymbol = isFiat && pool.trade_type === 'FIAT_CRYPTO' ? pool.fiat_currency : pool.offer_symbol;
   const requestSymbol = isFiat && pool.trade_type === 'CRYPTO_FIAT' ? pool.fiat_currency : pool.request_symbol;
@@ -117,7 +117,7 @@ export default function PoolDetailPage() {
     : 100;
 
   // 가격
-  const price = parseFloat(pool.request_amount) / parseFloat(pool.offer_amount);
+  const price = parseFloat(String(pool.request_amount ?? '1')) / parseFloat(String(pool.offer_amount ?? '1'));
   const priceStr = price.toLocaleString('en-US', { maximumFractionDigits: 6 });
 
   return (
@@ -205,10 +205,10 @@ export default function PoolDetailPage() {
               {/* Details grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 {[
-                  { label: 'Maker', value: <AddressLink address={pool.maker_address} chainId={pool.chain_id} short /> },
+                  { label: 'Maker', value: pool.maker_address ? <AddressLink address={pool.maker_address} chainId={pool.chain_id} short /> : '—' },
                   { label: 'Created', value: formatDistanceToNow(new Date(pool.created_at), { addSuffix: true }) },
                   { label: 'Expires', value: pool.expires_at ? <Countdown until={pool.expires_at} /> : 'Never' },
-                  { label: 'Fee', value: `${(pool.fee_bps / 100).toFixed(2)}%` },
+                  { label: 'Fee', value: `${((pool.fee_bps ?? 0) / 100).toFixed(2)}%` },
                   { label: 'Remaining', value: `${remainingPct}%` },
                   { label: 'Partial', value: pool.allow_partial ? 'Allowed' : 'No' },
                   ...(pool.onchain_pool_id ? [{ label: 'On-chain ID', value: pool.onchain_pool_id.toString() }] : []),

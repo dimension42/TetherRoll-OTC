@@ -20,7 +20,9 @@ export function RequestFiatTrade({ pool }: { pool: Pool }) {
   const callerIsSeller = isFiatCrypto;
 
   // 수량 범위
-  const maxFiat = pool.fiat_currency === 'KRW' ? parseFloat(pool.trade_type === 'FIAT_CRYPTO' ? pool.offer_amount : pool.request_amount) : 0;
+  const maxFiat = pool.fiat_currency === 'KRW'
+    ? parseFloat(String(pool.trade_type === 'FIAT_CRYPTO' ? (pool.offer_amount ?? '0') : (pool.request_amount ?? '0')))
+    : 0;
 
   const handleRequest = async () => {
     setError(null);

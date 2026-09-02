@@ -3,6 +3,8 @@ import { requireRole } from '@/lib/auth/adminRoles';
 import { auditLog, handleApiError } from '@/lib/auth/guards';
 import { isAddress } from 'viem';
 
+export const dynamic = 'force-dynamic';
+
 /** GET /api/admin/treasury/transfers */
 export async function GET() {
   try {

@@ -4,6 +4,8 @@ import { requireRole } from '@/lib/auth/adminRoles';
 import { db } from '@/lib/db';
 import { computeSettlement } from '@/lib/roll/settle';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
     const admin = await requireRole('ops');

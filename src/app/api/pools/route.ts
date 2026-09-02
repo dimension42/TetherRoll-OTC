@@ -7,6 +7,8 @@ import { db } from '@/lib/db';
 import { findToken, FIAT_CURRENCIES } from '@/lib/tokens';
 import { isChainDeployed } from '@/lib/contracts/addresses';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * 풀 API v2 (온체인 연동).
  *

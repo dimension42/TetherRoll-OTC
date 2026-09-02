@@ -1,6 +1,8 @@
 import { requireUser, handleApiError } from '@/lib/auth/guards';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/trades/mine — 내 거래 (maker/taker/seller/buyer).
  */

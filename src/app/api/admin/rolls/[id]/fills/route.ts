@@ -5,6 +5,8 @@ import { requireRole } from '@/lib/auth/adminRoles';
 import { parseBody } from '@/lib/roll/http';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 const schema = z.object({
   venueId: z.string(),
   amountKrw: z.number().positive(),

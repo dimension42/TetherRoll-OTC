@@ -5,6 +5,8 @@ import { rateLimitByUser } from '@/lib/ratelimit';
 import { db } from '@/lib/db';
 import { confirmTx } from '@/lib/onchain/confirm';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/pools/[id]/close-confirm — cancel/expire tx 확인.
  */

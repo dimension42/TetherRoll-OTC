@@ -2,6 +2,8 @@ import { db } from '@/lib/db';
 import { requireRole } from '@/lib/auth/adminRoles';
 import { auditLog, handleApiError } from '@/lib/auth/guards';
 
+export const dynamic = 'force-dynamic';
+
 /** POST /api/admin/contract/audit — { chainId, action, txHash, after } */
 export async function POST(req: Request) {
   try {

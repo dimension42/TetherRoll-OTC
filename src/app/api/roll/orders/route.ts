@@ -7,6 +7,8 @@ import { db } from '@/lib/db';
 import { ROLL_CHAINS } from '@/lib/tokens';
 import { notifyNewOrder, notifyLargeOrder } from '@/lib/roll/notify';
 
+export const dynamic = 'force-dynamic';
+
 const createSchema = z.object({
   quoteId: z.string().uuid(),
   receiveAddress: z.string(),

@@ -2,6 +2,8 @@ import { requireUser, handleApiError } from '@/lib/auth/guards';
 import { db } from '@/lib/db';
 import { destroySession } from '@/lib/auth/session';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/auth/logout-all — 모든 세션 무효화 (session_version 증가).
  */
