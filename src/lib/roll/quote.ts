@@ -78,7 +78,8 @@ export async function generateQuote(userId: string, input: QuoteInput): Promise<
     });
   });
 
-  allAds.sort((a, b) => a.price - b.price); // ascending = better price first
+  // BUY(KRW→asset): 낮은 KRW/asset 가격이 유리 → 오름차순. SELL(asset→KRW): 높은 가격이 유리 → 내림차순.
+  allAds.sort((a, b) => (input.side === 'BUY' ? a.price - b.price : b.price - a.price));
 
   let remainingKrw = input.amountKrw;
   const allocations: Array<{
@@ -87,27 +88,30 @@ export async function generateQuote(userId: string, input: QuoteInput): Promise<
     amountKrw: number;
     amountAsset: number;
     rate: number;
+    spreadBps: number;
   }> = [];
 
   for (const ad of allAds) {
     if (remainingKrw <= 0) break;
     // Check venue-specific override
+    // 체결 원가는 venue 원시 호가로 계산하고, 플랫폼 스프레드는 별도 항목(feePlatform)으로 분리 표기한다 (PRD §1.2).
     const venueOverride = venuesData.find(v => v.id === ad.venueId)?.fee_override_bps;
     const effectiveSpreadBps = venueOverride ?? spreadBps;
-    const effectiveRate = ad.price * (1 + effectiveSpreadBps / 10000);
+    const rate = ad.price;
 
-    const maxAsset = Math.min(ad.available, ad.maxKrw / effectiveRate);
-    const maxKrwForThisAd = Math.min(remainingKrw, ad.maxKrw, maxAsset * effectiveRate);
+    const maxAsset = Math.min(ad.available, ad.maxKrw / rate);
+    const maxKrwForThisAd = Math.min(remainingKrw, ad.maxKrw, maxAsset * rate);
 
     if (maxKrwForThisAd < ad.minKrw) continue; // skip if below min
 
-    const assetAmount = maxKrwForThisAd / effectiveRate;
+    const assetAmount = maxKrwForThisAd / rate;
     allocations.push({
       venueId: ad.venueId,
       venueName: ad.venueName,
       amountKrw: maxKrwForThisAd,
       amountAsset: assetAmount,
-      rate: effectiveRate,
+      rate,
+      spreadBps: effectiveSpreadBps,
     });
     remainingKrw -= maxKrwForThisAd;
   }
@@ -145,7 +149,8 @@ export async function generateQuote(userId: string, input: QuoteInput): Promise<
   const execCost = filledKrw;
   const totalAsset = venues.reduce((sum, v) => sum + v.amountAsset, 0);
   const weightedRate = execCost / (totalAsset || 1);
-  const feePlatform = totalAsset * weightedRate * (spreadBps / 10000);
+  // 플랫폼 수수료 = Σ(배분액 × 해당 venue 스프레드 bps). venue 오버라이드 반영.
+  const feePlatform = allocations.reduce((sum, a) => sum + a.amountKrw * (a.spreadBps / 10000), 0);
 
   const chainInfo = ROLL_CHAINS.find(c => c.key === input.chain);
   const gasPerVenue = chainInfo?.gasEstimateKrw ?? 0;

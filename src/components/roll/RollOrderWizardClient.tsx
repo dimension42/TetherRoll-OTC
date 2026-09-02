@@ -88,20 +88,25 @@ export default function RollOrderWizardClient() {
             <div className="mb-6">
               <label className="block text-sm font-medium text-white mb-2">Direction</label>
               <div className="flex gap-3">
-                {(['BUY', 'SELL'] as const).map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setSide(s)}
-                    className="flex-1 py-3 rounded-xl font-semibold"
-                    style={{
-                      background: side === s ? 'rgba(0,201,167,0.15)' : '#111',
-                      color: side === s ? '#00c9a7' : '#8FA398',
-                      border: `1px solid ${side === s ? '#00c9a7' : '#1f1f1f'}`,
-                    }}
-                  >
-                    {s}
-                  </button>
-                ))}
+                {(['BUY', 'SELL'] as const).map(s => {
+                  const available = s === 'BUY'; // 런칭 범위: KRW → 자산 매수만
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => available && setSide(s)}
+                      disabled={!available}
+                      className="flex-1 py-3 rounded-xl font-semibold"
+                      style={{
+                        background: side === s ? 'rgba(0,201,167,0.15)' : '#111',
+                        color: side === s ? '#00c9a7' : available ? '#8FA398' : '#4a5a52',
+                        border: `1px solid ${side === s ? '#00c9a7' : '#1f1f1f'}`,
+                        cursor: available ? 'pointer' : 'not-allowed',
+                      }}
+                    >
+                      {s === 'BUY' ? 'BUY · KRW → Asset' : 'SELL · Coming soon'}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
