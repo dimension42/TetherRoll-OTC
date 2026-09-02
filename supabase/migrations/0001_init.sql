@@ -178,18 +178,18 @@ create table public.platform_settings (
 );
 
 -- ── RLS: 전 테이블 잠금. 모든 접근은 서버 API(service role) 경유 ──
-do $$
-declare t text;
-begin
-  for t in
-    select tablename from pg_tables where schemaname = 'public'
-      and tablename in ('users','vip_access_requests','pools','venues','roll_orders','roll_fills',
-                        'fee_configs','refunds','treasury_transfers','whitelist_addresses',
-                        'admin_audit_logs','platform_settings')
-  loop
-    execute format('alter table public.%I enable row level security', t);
-  end loop;
-end $$;
+alter table public.users enable row level security;
+alter table public.vip_access_requests enable row level security;
+alter table public.pools enable row level security;
+alter table public.venues enable row level security;
+alter table public.roll_orders enable row level security;
+alter table public.roll_fills enable row level security;
+alter table public.fee_configs enable row level security;
+alter table public.refunds enable row level security;
+alter table public.treasury_transfers enable row level security;
+alter table public.whitelist_addresses enable row level security;
+alter table public.admin_audit_logs enable row level security;
+alter table public.platform_settings enable row level security;
 
 -- ── seed ──
 insert into public.venues (id, name, adapter_key, enabled) values
