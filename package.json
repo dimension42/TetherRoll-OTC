@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test:contracts": "cd contracts && npx hardhat test"
   },
@@ -37,15 +37,15 @@
     "three": "^0.170.0",
     "viem": "^2.48.8",
     "wagmi": "^2.19.5",
-    "zustand": "^5.0.12",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "eslint": "^9",
+    "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.35",
     "tailwindcss": "^3.4.19",
     "typescript": "^5"
