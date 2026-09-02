@@ -23,15 +23,10 @@ export default function LoginButton() {
   }, []);
 
   if (!ready) {
-    return (
-      <div
-        className="h-10 w-28 rounded-xl animate-pulse"
-        style={{ background: 'rgba(255,255,255,0.05)' }}
-      />
-    );
+    return <div className="h-10 w-28 rounded-xl animate-pulse" style={{ background: 'rgba(255,255,255,0.05)' }} />;
   }
 
-  if (!authenticated) {
+  if (!authenticated || !user) {
     return (
       <button
         onClick={login}
@@ -43,30 +38,15 @@ export default function LoginButton() {
     );
   }
 
-  const wallet = user?.wallet;
-  const email = user?.email?.address;
-  const google = user?.google?.email;
-  const twitter = user?.twitter?.username;
-  const telegram = user?.telegram?.username;
-
-  const displayName = twitter
-    ? `@${twitter}`
-    : telegram
-    ? `@${telegram}`
-    : email || google || (wallet ? shortenAddr(wallet.address) : 'User');
-
-  const walletAddress = wallet?.address;
+  const displayName =
+    user.displayName || user.email || (user.walletAddress ? shortenAddr(user.walletAddress) : 'User');
 
   return (
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setMenuOpen(!menuOpen)}
         className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105"
-        style={{
-          background: 'rgba(0,201,167,0.1)',
-          border: '1px solid rgba(0,201,167,0.25)',
-          color: '#00c9a7',
-        }}
+        style={{ background: 'rgba(0,201,167,0.1)', border: '1px solid rgba(0,201,167,0.25)', color: '#00c9a7' }}
       >
         <div
           className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-black"
@@ -83,18 +63,14 @@ export default function LoginButton() {
       {menuOpen && (
         <div
           className="absolute right-0 top-full mt-2 w-64 rounded-xl overflow-hidden shadow-2xl z-50"
-          style={{ background: '#151515', border: '1px solid rgba(255,255,255,0.08)' }}
+          style={{ background: '#0F1712', border: '1px solid rgba(255,255,255,0.08)' }}
         >
           <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             <p className="text-white text-sm font-semibold truncate">{displayName}</p>
-            {walletAddress && (
-              <p className="text-xs mt-1" style={{ color: '#666' }}>
-                {shortenAddr(walletAddress)}
-              </p>
+            {user.walletAddress && (
+              <p className="text-xs mt-1 font-mono" style={{ color: '#666' }}>{shortenAddr(user.walletAddress)}</p>
             )}
-            {email && (
-              <p className="text-xs mt-0.5" style={{ color: '#666' }}>{email}</p>
-            )}
+            {user.email && <p className="text-xs mt-0.5" style={{ color: '#666' }}>{user.email}</p>}
           </div>
           <div className="p-1">
             <a
@@ -116,7 +92,7 @@ export default function LoginButton() {
             <button
               onClick={() => { logout(); setMenuOpen(false); }}
               className="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors hover:bg-white/5"
-              style={{ color: '#ff4466' }}
+              style={{ color: '#FF4D5E' }}
             >
               Sign Out
             </button>

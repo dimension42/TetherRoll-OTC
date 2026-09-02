@@ -50,11 +50,6 @@ export const ESCROW_STATUS = {
   4: { label: 'CANCELLED', class: 'badge-cancelled' },
 } as const;
 
-// Admin wallet addresses (multisig members)
-export const ADMIN_ADDRESSES = [
-  '0x0000000000000000000000000000000000000000', // replace with real admin addresses
-];
-
 export const PLATFORM_FEE_BPS = 30; // 0.3%
 export const RELAY_FEE_BPS = 50;    // 0.5%
 export const DEPOSIT_FEE_BPS = 10;  // 0.1%

@@ -4,9 +4,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "outputDirectory": ".next",
-  "env": {
-    "NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID": "ea62d38d46a01a1b9d8397562fe5097f"
-  },
   "headers": [
     {
       "source": "/(.*)",
@@ -15,6 +12,20 @@
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
       ]
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/indexer",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/expire",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/custody",
+      "schedule": "*/2 * * * *"
     }
   ]
 }
