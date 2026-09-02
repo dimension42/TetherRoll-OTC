@@ -1,34 +1,133 @@
-const { ethers } = require("hardhat");
+const { ethers, network } = require("hardhat");
+const fs = require("fs");
+const path = require("path");
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  console.log("Deploying from:", deployer.address);
+  const chainId = network.config.chainId;
 
-  // 1. FeeDistributor (Gnosis Safe multisig address in prod)
-  const FeeDistributor = await ethers.getContractFactory("FeeDistributor");
-  const feeDistributor = await FeeDistributor.deploy(deployer.address);
-  await feeDistributor.waitForDeployment();
-  console.log("FeeDistributor:", await feeDistributor.getAddress());
+  console.log("====================================");
+  console.log("EscrowVault v2 Deployment");
+  console.log("====================================");
+  console.log("Network:", network.name);
+  console.log("Chain ID:", chainId);
+  console.log("Deployer:", deployer.address);
+  console.log("Balance:", ethers.formatEther(await ethers.provider.getBalance(deployer.address)), "ETH");
 
-  // 2. PoolRegistry
-  const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
-  const poolRegistry = await PoolRegistry.deploy(deployer.address);
-  await poolRegistry.waitForDeployment();
-  console.log("PoolRegistry:", await poolRegistry.getAddress());
+  // Admin: deployer or env override
+  const admin = process.env.ADMIN_ADDRESS || deployer.address;
+  const feeRecipient = process.env.FEE_RECIPIENT || deployer.address;
 
-  // 3. EscrowVault
+  console.log("\nDeployment params:");
+  console.log("  Admin:", admin);
+  console.log("  Fee Recipient:", feeRecipient);
+  console.log("  Fee BPS: 30 (0.3%)");
+  console.log("  Penalty BPS: 1000 (10%)");
+
+  // Deploy
   const EscrowVault = await ethers.getContractFactory("EscrowVault");
-  const escrowVault = await EscrowVault.deploy(
-    deployer.address,
-    await feeDistributor.getAddress()
-  );
-  await escrowVault.waitForDeployment();
-  console.log("EscrowVault:", await escrowVault.getAddress());
+  const vault = await EscrowVault.deploy(admin, feeRecipient, 30, 1000);
 
-  console.log("\n=== Update src/lib/constants.ts with these addresses ===");
-  console.log(`poolRegistry: '${await poolRegistry.getAddress()}'`);
-  console.log(`escrowVault: '${await escrowVault.getAddress()}'`);
-  console.log(`feeDistributor: '${await feeDistributor.getAddress()}'`);
+  console.log("\nDeploying EscrowVault...");
+  const deployTx = vault.deploymentTransaction();
+  console.log("  TX hash:", deployTx.hash);
+
+  await vault.waitForDeployment();
+  const address = await vault.getAddress();
+
+  console.log("  Deployed to:", address);
+
+  // Wait for confirmations on live networks
+  if (network.name !== "hardhat" && network.name !== "localhost") {
+    console.log("\nWaiting for 2 confirmations...");
+    await vault.deploymentTransaction().wait(2);
+    console.log("  Confirmed!");
+  }
+
+  // Get deploy block
+  const receipt = await ethers.provider.getTransactionReceipt(deployTx.hash);
+  const deployedBlock = receipt.blockNumber;
+
+  // Save deployment record
+  const deploymentsDir = path.join(__dirname, "..", "deployments");
+  if (!fs.existsSync(deploymentsDir)) {
+    fs.mkdirSync(deploymentsDir, { recursive: true });
+  }
+
+  const deploymentRecord = {
+    chainId,
+    address,
+    deployedBlock,
+    deployer: deployer.address,
+    admin,
+    feeRecipient,
+    feeBps: 30,
+    penaltyBps: 1000,
+    txHash: deployTx.hash,
+    timestamp: new Date().toISOString(),
+  };
+
+  const deploymentFile = path.join(deploymentsDir, `${chainId}.json`);
+  fs.writeFileSync(deploymentFile, JSON.stringify(deploymentRecord, null, 2));
+  console.log("\nDeployment record saved:", deploymentFile);
+
+  // Update src/lib/contracts/addresses.ts
+  updateAddressesFile(chainId, address, deployedBlock);
+
+  console.log("\n====================================");
+  console.log("Deployment Complete!");
+  console.log("====================================");
+  console.log("\nNext steps:");
+  console.log("1. Grant ARBITRATOR_ROLE to ops wallet:");
+  console.log(`   vault.grantRole(ARBITRATOR_ROLE, "<ops-address>")`);
+  console.log("2. Grant PAUSER_ROLE to ops wallet:");
+  console.log(`   vault.grantRole(PAUSER_ROLE, "<ops-address>")`);
+
+  if (network.name === "sepolia" || network.name === "polygon" || network.name === "bsc" || network.name === "mainnet") {
+    console.log("\n3. Verify on Etherscan:");
+    const apiKey = network.name === "sepolia" || network.name === "mainnet"
+      ? process.env.ETHERSCAN_API_KEY
+      : network.name === "polygon"
+        ? process.env.POLYGONSCAN_API_KEY
+        : process.env.BSCSCAN_API_KEY;
+
+    if (apiKey) {
+      console.log(`   npx hardhat verify --network ${network.name} ${address} "${admin}" "${feeRecipient}" 30 1000`);
+    } else {
+      console.log("   (Set API key in .env.local first)");
+    }
+  }
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+function updateAddressesFile(chainId, address, deployedBlock) {
+  const addressesPath = path.join(__dirname, "..", "..", "src", "lib", "contracts", "addresses.ts");
+
+  if (!fs.existsSync(addressesPath)) {
+    console.warn("Warning: addresses.ts not found at", addressesPath);
+    return;
+  }
+
+  let content = fs.readFileSync(addressesPath, "utf8");
+
+  // Match the line for this chainId and replace it
+  const pattern = new RegExp(
+    `(${chainId}:\\s*\\{\\s*address:\\s*)'[^']*'(\\s*,\\s*deployedBlock:\\s*)\\d+`,
+    "g"
+  );
+
+  const replacement = `$1'${address}'$2${deployedBlock}`;
+
+  if (pattern.test(content)) {
+    content = content.replace(pattern, replacement);
+    fs.writeFileSync(addressesPath, content);
+    console.log(`Updated addresses.ts for chain ${chainId}`);
+  } else {
+    console.warn(`Warning: Could not find entry for chain ${chainId} in addresses.ts`);
+    console.log(`Please manually add:\n  ${chainId}: { address: '${address}', deployedBlock: ${deployedBlock} },`);
+  }
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

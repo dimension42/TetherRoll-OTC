@@ -1,0 +1,23 @@
+{
+  "name": "tetherroll-contracts",
+  "version": "2.0.0",
+  "description": "TetherRoll OTC EscrowVault v2 smart contracts",
+  "private": true,
+  "scripts": {
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "test:gas": "hardhat test",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "deploy:polygon": "hardhat run scripts/deploy.js --network polygon",
+    "deploy:bsc": "hardhat run scripts/deploy.js --network bsc",
+    "export-abi": "node scripts/export-abi.js"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.4.7",
+    "hardhat": "^2.22.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2"
+  }
+}
