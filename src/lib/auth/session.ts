@@ -10,8 +10,9 @@ function secret(): Uint8Array {
   return new TextEncoder().encode(s);
 }
 
-export async function createSession(userId: string) {
-  const token = await new SignJWT({ uid: userId })
+export async function createSession(userId: string, sessionVersion?: number) {
+  const sv = sessionVersion ?? 1;
+  const token = await new SignJWT({ uid: userId, sv })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE}s`)
@@ -32,6 +33,17 @@ export async function getSessionUserId(): Promise<string | null> {
   try {
     const { payload } = await jwtVerify(token, secret());
     return (payload.uid as string) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getSessionVersion(): Promise<number | null> {
+  const token = cookies().get(COOKIE)?.value;
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, secret());
+    return (payload.sv as number) ?? null;
   } catch {
     return null;
   }

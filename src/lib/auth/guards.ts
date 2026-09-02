@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { getSessionUserId } from '@/lib/auth/session';
+import { getSessionUserId, getSessionVersion } from '@/lib/auth/session';
 
 export interface AppUser {
   id: string;
@@ -11,20 +11,24 @@ export interface AppUser {
   vip_status: 'none' | 'pending' | 'approved' | 'revoked';
   vip_expires_at: string | null;
   banned_at: string | null;
+  session_version: number;
 }
 
 export class AuthError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(public status: number, message: string, public issues?: unknown) {
     super(message);
   }
 }
 
-/** 세션 → users 행 조회. 밴 계정은 세션이 있어도 차단. */
+/** 세션 → users 행 조회. 밴 계정은 세션이 있어도 차단. 세션 버전 불일치 시도 차단. */
 export async function getSessionUser(): Promise<AppUser | null> {
   const uid = await getSessionUserId();
   if (!uid) return null;
+  const sv = await getSessionVersion();
   const { data } = await db().from('users').select('*').eq('id', uid).maybeSingle();
   if (!data || data.banned_at) return null;
+  // 세션 버전 체크 (세션 무효화)
+  if (sv !== null && sv !== data.session_version) return null;
   return data as AppUser;
 }
 
@@ -82,10 +86,30 @@ export async function auditLog(
   });
 }
 
+/** 킬스위치 체크 — 거래 중단 시 503 */
+export async function requireNotPaused(): Promise<void> {
+  const { data } = await db().from('platform_settings').select('value').eq('key', 'kill_switch').maybeSingle();
+  if (data?.value && (data.value as { enabled?: boolean }).enabled === true) {
+    throw new AuthError(503, 'Trading paused');
+  }
+}
+
+/** 클라이언트 IP 추출 (x-forwarded-for 첫 hop) */
+export function getClientIp(req: Request): string {
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) {
+    const first = forwarded.split(',')[0].trim();
+    if (first) return first;
+  }
+  return 'unknown';
+}
+
 /** API 라우트 공통 에러 핸들러 */
 export function handleApiError(e: unknown): Response {
   if (e instanceof AuthError) {
-    return Response.json({ error: e.message }, { status: e.status });
+    const body: { error: string; issues?: unknown } = { error: e.message };
+    if (e.issues) body.issues = e.issues;
+    return Response.json(body, { status: e.status });
   }
   console.error(e);
   return Response.json({ error: 'Internal error' }, { status: 500 });
