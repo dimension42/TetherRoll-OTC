@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import ConnectWallet from '@/components/wallet/ConnectWallet';
+import LoginButton from '@/components/auth/LoginButton';
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 
@@ -93,6 +94,7 @@ export default function Navbar() {
 
           <div className="flex items-center gap-3">
             <ConnectWallet />
+            <LoginButton />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden w-8 h-8 flex items-center justify-center"
