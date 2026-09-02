@@ -1,6 +1,5 @@
 import { db } from '@/lib/db';
 import { AuthError } from '@/lib/auth/guards';
-import { encryptJson } from '@/lib/crypto';
 import { getAsset } from './assets';
 import { validateReceiveAddress } from './address';
 import { amountWithSuffix } from './suffix';
@@ -22,6 +21,9 @@ interface CreateDeskTradeInput {
     request_amount_wei?: string | null;
     allow_partial: boolean;
     deadline?: string | null;
+    maker_receive_address?: string | null;
+    maker_refund_address?: string | null;
+    maker_bank_info_enc?: string | null;
   };
   taker: { id: string };
   amount?: string; // Partial fill amount (minor units)
@@ -35,7 +37,7 @@ interface CreateDeskTradeInput {
  * Builds 2 legs: offer (pool creator) and request (taker).
  */
 export async function createDeskTrade(input: CreateDeskTradeInput): Promise<string> {
-  const { pool, taker, amount, receiveAddress, refundAddress, bankInfo } = input;
+  const { pool, taker, amount, receiveAddress, refundAddress } = input;
 
   if (pool.kind !== 'DESK') {
     throw new AuthError(400, 'Pool is not a DESK pool');
@@ -93,16 +95,22 @@ export async function createDeskTrade(input: CreateDeskTradeInput): Promise<stri
     status: string;
   }> = [];
 
-  // Offer leg (maker)
+  // Offer leg (maker offers)
   if (pool.offer_asset_id) {
-    // Crypto offer
+    // Crypto offer: maker deposits crypto → taker receives
     const asset = await getAsset(pool.offer_asset_id);
     if (!asset) throw new AuthError(400, 'Offer asset not found');
     if (!asset.enabled) throw new AuthError(400, 'Offer asset is disabled');
 
     // Taker's receive address for this leg's payout
-    if (!receiveAddress) throw new AuthError(400, 'receiveAddress required for crypto offer');
+    if (!receiveAddress) throw new AuthError(400, 'receiveAddress required for receiving crypto offer');
     if (!validateReceiveAddress(asset, receiveAddress)) throw new AuthError(400, 'Invalid receiveAddress');
+
+    // Maker's refund address (from pool)
+    if (!pool.maker_refund_address) throw new AuthError(400, 'Pool missing maker_refund_address');
+    if (!validateReceiveAddress(asset, pool.maker_refund_address)) {
+      throw new AuthError(500, 'Invalid pool maker_refund_address');
+    }
 
     const suffix = await amountWithSuffix(offerAmount, asset.decimals, asset.id);
 
@@ -117,36 +125,42 @@ export async function createDeskTrade(input: CreateDeskTradeInput): Promise<stri
       amount_with_suffix: suffix.toString(),
       deposit_address: asset.deposit_address,
       receive_address: receiveAddress,
-      refund_address: refundAddress || receiveAddress, // fallback
+      refund_address: pool.maker_refund_address,
       status: 'PENDING',
     });
-  } else if (pool.fiat_currency && isSell) {
-    // Fiat offer (taker is buyer, sends KRW)
-    if (!bankInfo) throw new AuthError(400, 'bankInfo required for fiat offer');
+  } else if (pool.fiat_currency && isBuy) {
+    // Fiat offer (FIAT_CRYPTO: maker offers KRW)
+    // Taker sends KRW to maker, so bank_info is maker's (receiver)
+    if (!pool.maker_bank_info_enc) throw new AuthError(400, 'Pool missing maker bank info');
     legs.push({
       trade_id: tradeId,
       side: 'OFFER',
-      owner_id: pool.creator_id,
-      counterparty_id: taker.id,
+      owner_id: taker.id, // Taker sends KRW
+      counterparty_id: pool.creator_id,
       kind: 'FIAT',
       fiat_currency: pool.fiat_currency,
       amount: offerAmount.toString(),
-      bank_info_enc: encryptJson(bankInfo),
+      bank_info_enc: pool.maker_bank_info_enc,
       status: 'PENDING',
     });
   }
 
-  // Request leg (taker)
+  // Request leg (what maker requests)
   if (pool.request_asset_id) {
-    // Crypto request
+    // Crypto request: taker deposits crypto → maker receives
     const asset = await getAsset(pool.request_asset_id);
     if (!asset) throw new AuthError(400, 'Request asset not found');
     if (!asset.enabled) throw new AuthError(400, 'Request asset is disabled');
 
-    // Maker's receive address (should be from pool creation, but we don't have it in pool schema yet — use placeholder)
-    // For now, require taker to provide their own address for the leg they owe
-    if (!receiveAddress) throw new AuthError(400, 'receiveAddress required');
-    if (!validateReceiveAddress(asset, receiveAddress)) throw new AuthError(400, 'Invalid receiveAddress');
+    // Maker's receive address (from pool)
+    if (!pool.maker_receive_address) throw new AuthError(400, 'Pool missing maker_receive_address');
+    if (!validateReceiveAddress(asset, pool.maker_receive_address)) {
+      throw new AuthError(500, 'Invalid pool maker_receive_address');
+    }
+
+    // Taker's refund address
+    if (!refundAddress) throw new AuthError(400, 'refundAddress required for depositing crypto');
+    if (!validateReceiveAddress(asset, refundAddress)) throw new AuthError(400, 'Invalid refundAddress');
 
     const suffix = await amountWithSuffix(requestAmount, asset.decimals, asset.id);
 
@@ -160,22 +174,23 @@ export async function createDeskTrade(input: CreateDeskTradeInput): Promise<stri
       amount: requestAmount.toString(),
       amount_with_suffix: suffix.toString(),
       deposit_address: asset.deposit_address,
-      receive_address: receiveAddress,
-      refund_address: refundAddress || receiveAddress,
+      receive_address: pool.maker_receive_address,
+      refund_address: refundAddress,
       status: 'PENDING',
     });
-  } else if (pool.fiat_currency && isBuy) {
-    // Fiat request (taker is seller, receives KRW)
-    if (!bankInfo) throw new AuthError(400, 'bankInfo required');
+  } else if (pool.fiat_currency && isSell) {
+    // Fiat request (CRYPTO_FIAT: maker requests KRW)
+    // Taker sends KRW to maker, so bank_info is maker's (receiver)
+    if (!pool.maker_bank_info_enc) throw new AuthError(400, 'Pool missing maker bank info');
     legs.push({
       trade_id: tradeId,
       side: 'REQUEST',
-      owner_id: taker.id,
+      owner_id: taker.id, // Taker sends KRW
       counterparty_id: pool.creator_id,
       kind: 'FIAT',
       fiat_currency: pool.fiat_currency,
       amount: requestAmount.toString(),
-      bank_info_enc: encryptJson(bankInfo),
+      bank_info_enc: pool.maker_bank_info_enc,
       status: 'PENDING',
     });
   }

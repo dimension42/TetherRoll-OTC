@@ -102,6 +102,14 @@ const createPoolSchema = z.object({
   collateralMode: z.enum(['NONE', 'KRW_SIDE_LOCKS']).optional(),
   collateralPct: z.number().int().min(10).max(100).optional(),
   deadline: z.string().datetime({ offset: true }).optional(),
+  // DESK maker inputs
+  receiveAddress: z.string().optional(),
+  refundAddress: z.string().optional(),
+  bankInfo: z.object({
+    bank: z.string(),
+    account: z.string(),
+    holder: z.string(),
+  }).optional(),
 });
 
 const MAX_POOL_DURATION_MS = 30 * 24 * 3600 * 1000;
@@ -181,7 +189,7 @@ export async function POST(req: Request) {
 
     // ── DESK (custody) ──
     if (kind === 'DESK') {
-      const { offerAssetId, requestAssetId, offerAmount, requestAmount, fiatCurrency: deskFiat } = body;
+      const { offerAssetId, requestAssetId, offerAmount, requestAmount, fiatCurrency: deskFiat, receiveAddress, refundAddress, bankInfo } = body;
       if (!offerAssetId && !requestAssetId && !deskFiat) {
         throw new AuthError(400, 'DESK requires at least one custody asset or fiat');
       }
@@ -208,6 +216,37 @@ export async function POST(req: Request) {
       if (deskFiat) {
         if (!isVip) throw new AuthError(404, 'Not found');
         deskTradeType = offerAssetId ? 'CRYPTO_FIAT' : 'FIAT_CRYPTO';
+      }
+
+      // Validate maker inputs
+      // receiveAddress: required when maker receives a custody asset (request side)
+      if (requestAssetId && requestAsset) {
+        if (!receiveAddress) throw new AuthError(400, 'receiveAddress required for receiving custody asset');
+        const { validateReceiveAddress } = await import('@/lib/custody/address');
+        if (!validateReceiveAddress(requestAsset, receiveAddress)) {
+          throw new AuthError(400, 'Invalid receiveAddress for request asset');
+        }
+      }
+
+      // refundAddress: required when maker deposits a custody asset (offer side)
+      if (offerAssetId && offerAsset) {
+        if (!refundAddress) throw new AuthError(400, 'refundAddress required for depositing custody asset');
+        const { validateReceiveAddress } = await import('@/lib/custody/address');
+        if (!validateReceiveAddress(offerAsset, refundAddress)) {
+          throw new AuthError(400, 'Invalid refundAddress for offer asset');
+        }
+      }
+
+      // bankInfo: required when maker receives fiat (request side is fiat)
+      let makerBankInfoEnc: string | null = null;
+      if (deskFiat && !offerAssetId) {
+        // FIAT_CRYPTO: maker receives KRW
+        if (!bankInfo) throw new AuthError(400, 'bankInfo required for receiving fiat');
+        if (!bankInfo.bank || !bankInfo.account || !bankInfo.holder) {
+          throw new AuthError(400, 'bankInfo must include bank, account, and holder');
+        }
+        const { encryptJson } = await import('@/lib/crypto');
+        makerBankInfoEnc = encryptJson(bankInfo);
       }
 
       const deskVis = body.visibility === 'vip' || deskFiat ? 'vip' : 'public';
@@ -238,6 +277,9 @@ export async function POST(req: Request) {
           status: 'OPEN',
           expires_at: exp.toISOString(),
           deadline: body.deadline || exp.toISOString(),
+          maker_receive_address: receiveAddress || null,
+          maker_refund_address: refundAddress || null,
+          maker_bank_info_enc: makerBankInfoEnc,
         })
         .select('id')
         .single();
