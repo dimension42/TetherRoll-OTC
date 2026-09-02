@@ -80,6 +80,8 @@ export default function Web3Provider({ children }: { children: ReactNode }) {
             config={{
               appearance: { theme: 'dark', accentColor: '#00c9a7' },
               loginMethods: ['email', 'google', 'twitter', 'telegram'],
+              // 소셜 유저도 온체인 주체를 갖도록 임베디드 지갑 자동 생성 (서버가 user_wallets 에 연결)
+              embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
             }}
           >
             {WALLETCONNECT_PROJECT_ID ? (

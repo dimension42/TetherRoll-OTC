@@ -26,6 +26,7 @@ export const config = wcProjectId
       projectId: wcProjectId,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       chains: SUPPORTED_CHAINS as any,
+      transports,
       ssr: true,
       storage: createStorage({
         storage: cookieStorage,
