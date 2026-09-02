@@ -1,16 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAccount, useConnect, useSignMessage, useChainId } from 'wagmi';
 import { createSiweMessage } from 'viem/siwe';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useLogin } from '@privy-io/react-auth';
 import { useAuth } from '@/hooks/useAuth';
 
 const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { refresh } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
@@ -19,9 +20,12 @@ export default function LoginPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
+  const next = searchParams.get('next');
+  const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+
   const done = async () => {
     await refresh();
-    router.push('/');
+    router.push(safeNext);
   };
 
   async function submitEmail(e: React.FormEvent) {
@@ -160,35 +164,66 @@ function SocialLogin({ onDone, busy, setBusy, setError }: {
   setBusy: (v: string | null) => void;
   setError: (v: string | null) => void;
 }) {
-  const { login, authenticated, getAccessToken } = usePrivy();
+  const { authenticated, getAccessToken } = usePrivy();
+  const [tokenExchanged, setTokenExchanged] = useState(false);
 
-  async function socialLogin() {
-    setError(null);
-    if (!authenticated) { login(); return; }
-    setBusy('social');
-    try {
-      const token = await getAccessToken();
-      const res = await fetch('/api/auth/privy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error ?? 'Social sign-in failed'); return; }
-      await onDone();
-    } finally {
-      setBusy(null);
+  // F-03 fix: useLogin with onComplete auto-exchanges token
+  const { login } = useLogin({
+    onComplete: async () => {
+      if (tokenExchanged) return; // prevent double-exchange
+      setBusy('social');
+      setTokenExchanged(true);
+      try {
+        const token = await getAccessToken();
+        const res = await fetch('/api/auth/privy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setError(data.error ?? 'Social sign-in failed'); return; }
+        await onDone();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Social sign-in failed');
+      } finally {
+        setBusy(null);
+      }
+    },
+  });
+
+  // Auto-exchange if already authenticated (page refresh case)
+  useEffect(() => {
+    if (authenticated && !tokenExchanged && busy !== 'social') {
+      (async () => {
+        setBusy('social');
+        setTokenExchanged(true);
+        try {
+          const token = await getAccessToken();
+          const res = await fetch('/api/auth/privy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+          });
+          const data = await res.json();
+          if (!res.ok) { setError(data.error ?? 'Social sign-in failed'); return; }
+          await onDone();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Social sign-in failed');
+        } finally {
+          setBusy(null);
+        }
+      })();
     }
-  }
+  }, [authenticated, tokenExchanged, busy, getAccessToken, setBusy, setError, onDone]);
 
   return (
     <button
-      onClick={socialLogin}
+      onClick={login}
       disabled={busy !== null}
       className="w-full mt-2 p-3.5 rounded-xl font-semibold text-sm transition-all hover:scale-[1.01]"
       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#F2F5F3' }}
     >
-      {authenticated ? 'Continue with Social Account' : 'Continue with Google / X / Telegram'}
+      {busy === 'social' ? 'Signing in…' : 'Continue with Google / X / Telegram'}
     </button>
   );
 }
