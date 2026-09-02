@@ -136,3 +136,6 @@ export async function POST(req: Request) {
     return handleApiError(e);
   }
 }
+
+// Note: DESK trade creation is handled by the above logic with additional fields.
+// Schema should be extended to include: receiveAddress, refundAddress for DESK pools.
