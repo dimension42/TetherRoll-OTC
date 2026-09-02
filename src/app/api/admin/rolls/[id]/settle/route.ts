@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin, handleApiError, AuthError, auditLog } from '@/lib/auth/guards';
+import { handleApiError, AuthError, auditLog } from '@/lib/auth/guards';
+import { requireRole } from '@/lib/auth/adminRoles';
 import { db } from '@/lib/db';
 import { computeSettlement } from '@/lib/roll/settle';
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
-    const admin = await requireAdmin();
+    const admin = await requireRole('ops');
     const { id } = params;
 
     const { data: order } = await db()
@@ -99,7 +100,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 // Preview endpoint (GET)
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
-    await requireAdmin();
+    await requireRole('ops');
     const { id } = params;
 
     const { data: order } = await db()

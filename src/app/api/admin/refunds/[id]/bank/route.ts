@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin, handleApiError, AuthError, auditLog } from '@/lib/auth/guards';
+import { handleApiError, AuthError, auditLog } from '@/lib/auth/guards';
+import { requireRole } from '@/lib/auth/adminRoles';
 import { db } from '@/lib/db';
 import { decrypt } from '@/lib/roll/crypto';
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
-    const admin = await requireAdmin();
+    const admin = await requireRole('ops');
     const { id } = params;
 
     const { data: refund } = await db()

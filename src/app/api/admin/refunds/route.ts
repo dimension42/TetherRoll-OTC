@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAdmin, handleApiError, auditLog } from '@/lib/auth/guards';
+import { handleApiError, auditLog } from '@/lib/auth/guards';
+import { requireRole } from '@/lib/auth/adminRoles';
 import { parseBody } from '@/lib/roll/http';
 import { db } from '@/lib/db';
 
@@ -12,7 +13,7 @@ const updateSchema = z.object({
 
 export async function GET(req: Request) {
   try {
-    await requireAdmin();
+    await requireRole('ops');
 
     const url = new URL(req.url);
     const status = url.searchParams.get('status');
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const admin = await requireAdmin();
+    const admin = await requireRole('ops');
     const body = await parseBody(req, updateSchema);
 
     const { data: refund } = await db()

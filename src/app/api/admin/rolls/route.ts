@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin, handleApiError } from '@/lib/auth/guards';
+import { handleApiError } from '@/lib/auth/guards';
+import { requireRole } from '@/lib/auth/adminRoles';
 import { db } from '@/lib/db';
 
 export async function GET(req: Request) {
   try {
-    await requireAdmin();
+    await requireRole('ops');
 
     const url = new URL(req.url);
     const status = url.searchParams.get('status');

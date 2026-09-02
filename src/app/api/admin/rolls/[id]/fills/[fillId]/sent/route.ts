@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAdmin, handleApiError, AuthError, auditLog } from '@/lib/auth/guards';
+import { handleApiError, AuthError, auditLog } from '@/lib/auth/guards';
+import { requireRole } from '@/lib/auth/adminRoles';
 import { parseBody } from '@/lib/roll/http';
 import { db } from '@/lib/db';
 
@@ -11,7 +12,7 @@ const schema = z.object({
 
 export async function POST(req: Request, { params }: { params: { id: string; fillId: string } }) {
   try {
-    const admin = await requireAdmin();
+    const admin = await requireRole('ops');
     const { fillId } = params;
     const body = await parseBody(req, schema);
 
