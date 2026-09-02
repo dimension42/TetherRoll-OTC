@@ -2,17 +2,17 @@ import { db } from '@/lib/db';
 import { requireRole } from '@/lib/auth/adminRoles';
 import { handleApiError } from '@/lib/auth/guards';
 
-/** GET /api/admin/audit-logs */
+/** GET /api/admin/treasury/transfers */
 export async function GET() {
   try {
     await requireRole('viewer');
     const { data, error } = await db()
-      .from('admin_audit_logs')
-      .select('id, action, target_type, target_id, before, after, created_at, users:admin_id (email, display_name)')
+      .from('treasury_transfers')
+      .select('*')
       .order('created_at', { ascending: false })
-      .limit(200);
+      .limit(100);
     if (error) throw error;
-    return Response.json({ logs: data });
+    return Response.json({ transfers: data });
   } catch (e) {
     return handleApiError(e);
   }
