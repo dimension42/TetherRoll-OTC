@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ROLL_CHAINS } from '@/lib/tokens';
+import { ROLL_CHAINS, type RollChainKey } from '@/lib/tokens';
 
 type Step = 'params' | 'quote';
 

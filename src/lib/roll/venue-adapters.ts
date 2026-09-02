@@ -90,12 +90,13 @@ export const binanceAdapter: VenueAdapter = {
       const json = await res.json();
       const adsData = json?.data ?? [];
       const ads: VenueAd[] = adsData
-        .map((ad: unknown) => {
+        .map((raw: unknown) => {
           try {
-            const price = parseFloat(ad.adv?.price);
-            const available = parseFloat(ad.adv?.surplusAmount);
-            const minSingleTransAmount = parseFloat(ad.adv?.minSingleTransAmount);
-            const maxSingleTransAmount = parseFloat(ad.adv?.maxSingleTransAmount);
+            const ad = raw as { adv?: Record<string, string | number | undefined> };
+            const price = parseFloat(String(ad.adv?.price ?? ''));
+            const available = parseFloat(String(ad.adv?.surplusAmount ?? ''));
+            const minSingleTransAmount = parseFloat(String(ad.adv?.minSingleTransAmount ?? '0'));
+            const maxSingleTransAmount = parseFloat(String(ad.adv?.maxSingleTransAmount ?? '0'));
             if (!price || !available) return null;
             return {
               price,
@@ -155,12 +156,13 @@ export const okxAdapter: VenueAdapter = {
       const json = await res.json();
       const adsData = json?.data?.buy ?? json?.data?.sell ?? [];
       const ads: VenueAd[] = adsData
-        .map((ad: unknown) => {
+        .map((raw: unknown) => {
           try {
-            const price = parseFloat(ad.price);
-            const available = parseFloat(ad.availableAmount);
-            const quoteMinAmountPerOrder = parseFloat(ad.quoteMinAmountPerOrder);
-            const quoteMaxAmountPerOrder = parseFloat(ad.quoteMaxAmountPerOrder);
+            const ad = raw as Record<string, string | number | undefined>;
+            const price = parseFloat(String(ad.price ?? ''));
+            const available = parseFloat(String(ad.availableAmount ?? ''));
+            const quoteMinAmountPerOrder = parseFloat(String(ad.quoteMinAmountPerOrder ?? '0'));
+            const quoteMaxAmountPerOrder = parseFloat(String(ad.quoteMaxAmountPerOrder ?? '0'));
             if (!price || !available) return null;
             return {
               price,

@@ -147,8 +147,6 @@ export async function generateQuote(userId: string, input: QuoteInput): Promise<
 
   // 6. Compute fees
   const execCost = filledKrw;
-  const totalAsset = venues.reduce((sum, v) => sum + v.amountAsset, 0);
-  const weightedRate = execCost / (totalAsset || 1);
   // 플랫폼 수수료 = Σ(배분액 × 해당 venue 스프레드 bps). venue 오버라이드 반영.
   const feePlatform = allocations.reduce((sum, a) => sum + a.amountKrw * (a.spreadBps / 10000), 0);
 
